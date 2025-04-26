@@ -1,9 +1,9 @@
 import { Component, OnInit } from "@angular/core"
 import { CommonModule } from "@angular/common"
-import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from "@angular/forms" // Regular import for FormBuilder
-import {  Router, RouterModule } from "@angular/router" // Regular import for Router
-import { AuthService } from "../../../services/auth.service" // Regular import for AuthService
-
+import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from "@angular/forms"
+import {  Router, RouterModule } from "@angular/router"
+import { AuthService } from "../../../services/auth.service"
+//hola
 @Component({
   selector: "app-login",
   standalone: true,
