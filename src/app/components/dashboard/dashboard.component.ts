@@ -1,11 +1,12 @@
 import { Component, type OnInit } from "@angular/core"
 import { CommonModule } from "@angular/common"
-import { RouterModule } from "@angular/router"
+import { RouterModule, Router } from "@angular/router" // Regular import for Router
 import { MapComponent } from "./map/map.component"
 import { RouteCardComponent } from "./route-card/route-card.component"
 import { StatisticsComponent } from "./statistics/statistics.component"
 import { WeatherWidgetComponent } from "./weather-widget/weather-widget.component"
 import { VesselStatusComponent } from "./vessel-status/vessel-status.component"
+import { AuthService } from "../../services/auth.service" // Regular import for AuthService
 
 @Component({
   selector: "app-dashboard",
@@ -48,7 +49,20 @@ export class DashboardComponent implements OnInit {
     fuelEfficiency: "87%",
   }
 
-  constructor() {}
+  currentUser: any = null
 
-  ngOnInit(): void {}
+  constructor(
+    private authService: AuthService,
+    private router: Router,
+  ) {}
+
+  ngOnInit(): void {
+    this.currentUser = this.authService.getCurrentUser()
+  }
+
+  logout(): void {
+    this.authService.logout().subscribe(() => {
+      this.router.navigate(["/login"])
+    })
+  }
 }
