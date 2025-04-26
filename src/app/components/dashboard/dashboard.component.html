@@ -1,0 +1,39 @@
+<div class="dashboard-container">
+  <header class="dashboard-header">
+    <h1>Maritime Route Management</h1>
+    <div class="actions">
+      <button class="btn primary">New Route</button>
+      <button class="btn secondary">Reports</button>
+    </div>
+  </header>
+
+  <div class="dashboard-content">
+    <div class="main-section">
+      <app-map></app-map>
+
+      <div class="statistics-row">
+        <app-statistics
+          [activeRoutes]="statistics.activeRoutes"
+          [vesselsInTransit]="statistics.vesselsInTransit"
+          [completedThisMonth]="statistics.completedThisMonth"
+          [fuelEfficiency]="statistics.fuelEfficiency">
+        </app-statistics>
+      </div>
+
+      <div class="routes-section">
+        <h2>Active Routes</h2>
+        <div class="routes-grid">
+          <app-route-card
+            *ngFor="let route of routes"
+            [route]="route">
+          </app-route-card>
+        </div>
+      </div>
+    </div>
+
+    <div class="sidebar">
+      <app-vessel-status [vessels]="vesselStatuses"></app-vessel-status>
+      <app-weather-widget [alerts]="weatherAlerts"></app-weather-widget>
+    </div>
+  </div>
+</div>
