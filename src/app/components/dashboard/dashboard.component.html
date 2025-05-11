@@ -2,14 +2,46 @@
   <header class="dashboard-header">
     <h1>Maritime Route Management</h1>
     <div class="actions">
-      <button class="btn primary">New Route</button>
-      <button class="btn secondary">Reports</button>
+      <button class="btn primary" (click)="togglePortSelector()">
+        {{ showPortSelector ? 'Cancelar Selección' : 'Seleccionar Puertos' }}
+      </button>
+      <div class="nav-links">
+        <a [routerLink]="['/shipment-reports']" class="nav-link">Informes de Envíos</a>
+        <a [routerLink]="['/route-history']" class="nav-link">Historial de Rutas</a>
+        <a [routerLink]="['/nearby-ports']" class="nav-link">Puertos Cercanos</a>
+      </div>
+      <div class="user-menu">
+        <div class="user-info">
+          <span class="user-name">{{ currentUser.name }}</span>
+          <span class="user-role">{{ currentUser.role }}</span>
+        </div>
+        <button class="btn icon-btn" title="Menú">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="1"></circle>
+            <circle cx="12" cy="5" r="1"></circle>
+            <circle cx="12" cy="19" r="1"></circle>
+          </svg>
+        </button>
+      </div>
     </div>
   </header>
 
   <div class="dashboard-content">
     <div class="main-section">
-      <app-map></app-map>
+      <!-- Error message display -->
+      <div class="error-message" *ngIf="errorMessage">
+        {{ errorMessage }}
+        <button class="close-error" (click)="errorMessage = ''">×</button>
+      </div>
+
+      <!-- Port Selector Component -->
+      <app-port-selector
+        *ngIf="showPortSelector"
+        (cancel)="handleCancelRouteCreation()">
+      </app-port-selector>
+
+      <!-- Map Component (ahora con Leaflet) -->
+      <app-map *ngIf="!showPortSelector"></app-map>
 
       <div class="statistics-row">
         <app-statistics
