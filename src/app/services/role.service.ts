@@ -7,7 +7,7 @@ export interface Role {
   id: string
   name: string
   permissions: string[]
-  // Add other role properties as needed
+
 }
 
 @Injectable({

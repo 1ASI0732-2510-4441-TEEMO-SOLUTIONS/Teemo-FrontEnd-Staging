@@ -50,7 +50,7 @@ export interface RouteHistoryItem {
 export class ReportService {
   private apiUrl = `${environment.apiUrl}/api/v1/reports`
 
-  // Datos de ejemplo para reportes de envío
+
   private mockShipmentReports: ShipmentReport[] = [
     {
       id: 1,
@@ -177,7 +177,7 @@ export class ReportService {
     },
   ]
 
-  // Datos de ejemplo para historial de rutas
+
   private mockRouteHistory: RouteHistoryItem[] = [
     {
       id: 1,
@@ -256,25 +256,24 @@ export class ReportService {
   constructor(private http: HttpClient) {}
 
   getShipmentReports(): Observable<ShipmentReport[]> {
-    // En un entorno real, esto haría una llamada HTTP al backend
+
     return of(this.mockShipmentReports).pipe(
       delay(800), // Simular latencia de red
     )
   }
 
   getShipmentReportById(id: number): Observable<ShipmentReport | undefined> {
-    // En un entorno real, esto haría una llamada HTTP al backend
+
     const report = this.mockShipmentReports.find((r) => r.id === id)
     return of(report).pipe(
-      delay(500), // Simular latencia de red
+      delay(500),
     )
   }
 
   getRouteHistory(filters?: any): Observable<RouteHistoryItem[]> {
-    // En un entorno real, esto haría una llamada HTTP al backend con filtros
     let filteredHistory = [...this.mockRouteHistory]
 
-    // Aplicar filtros si existen
+
     if (filters) {
       if (filters.startDate && filters.endDate) {
         filteredHistory = filteredHistory.filter(

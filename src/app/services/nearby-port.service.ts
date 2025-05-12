@@ -10,10 +10,10 @@ export interface NearbyPort {
   country: string
   latitude: number
   longitude: number
-  distance: number // distancia en millas náuticas
+  distance: number
   status: "open" | "closed"
   facilities: string[]
-  maxDepth: number // profundidad máxima en metros
+  maxDepth: number
   contactInfo: {
     phone: string
     email: string

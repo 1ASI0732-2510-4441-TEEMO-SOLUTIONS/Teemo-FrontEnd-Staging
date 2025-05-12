@@ -1,7 +1,7 @@
 import { Injectable } from "@angular/core"
-import {  HttpClient, HttpHeaders, type HttpErrorResponse } from "@angular/common/http"
-import {  Observable, throwError } from "rxjs"
-import { catchError, map, tap } from "rxjs/operators"
+import { HttpClient, HttpErrorResponse } from "@angular/common/http"
+import { type Observable, of } from "rxjs"
+import { catchError, tap } from "rxjs/operators"
 import { environment } from "../../environments/environment"
 
 export interface Port {
@@ -16,10 +16,10 @@ export interface Port {
   providedIn: "root",
 })
 export class PortService {
-  private apiUrl = `${environment.apiUrl}/api/v1`
+  private apiUrl = `${environment.apiUrl}/api/v1/ports`
 
-  // Datos estáticos de puertos para usar mientras se resuelve el problema de autenticación
-  private mockPorts: Port[] = [
+  // Datos de respaldo en caso de que la API falle
+  private fallbackPorts: Port[] = [
     {
       id: 1,
       name: "Singapore",
@@ -94,48 +94,20 @@ export class PortService {
 
   constructor(private http: HttpClient) {}
 
-  // Devolver datos estáticos en lugar de hacer una llamada HTTP
   getAllPorts(): Observable<Port[]> {
-    const url = `${this.apiUrl}/routes/ports`
-    console.log("Solicitando puertos desde:", url)
-
-    // Añadir headers de autenticación
-    const headers = new HttpHeaders({
-      Authorization: "Bearer " + this.getAuthToken(),
-    })
-
-    return this.http.get<any[]>(url, { headers }).pipe(
-      tap((response) => console.log("Respuesta del servidor:", response)),
-      map((ports) => {
-        // Mapear la respuesta al formato que esperamos
-        return ports.map((port) => ({
-          id: port.id || Math.random() * 1000, // Generar un ID si no viene
-          name: port.name,
-          latitude: port.lat,
-          longitude: port.lng,
-          continent: port.continent || "Desconocido",
-        }))
+    // Intentar obtener los puertos del backend
+    return this.http.get<Port[]>(this.apiUrl).pipe(
+      tap((ports) => {
+        console.log("Puertos obtenidos del backend:", ports)
       }),
-      catchError(this.handleError),
+      catchError((error: HttpErrorResponse) => {
+        console.error("Error al obtener puertos del backend:", error)
+
+        // Si hay un error de autenticación (401) o cualquier otro error,
+        // devolver los puertos de respaldo
+        console.log("Usando puertos de respaldo debido a error:", error.status)
+        return of(this.fallbackPorts)
+      }),
     )
-  }
-
-  private getAuthToken(): string {
-    // Intentar obtener el token del localStorage o sessionStorage
-    const token = localStorage.getItem("maritime_token") || sessionStorage.getItem("maritime_token")
-    return token || ""
-  }
-
-  private handleError(error: HttpErrorResponse) {
-    if (error.error instanceof ErrorEvent) {
-      // A client-side or network error occurred. Handle it accordingly.
-      console.error("An error occurred:", error.error.message)
-    } else {
-      // The backend returned an unsuccessful response code.
-      // The response body may contain clues as to what went wrong.
-      console.error(`Backend returned code ${error.status}, ` + `body was: ${error.error}`)
-    }
-    // Return an observable with a user-facing error message.
-    return throwError("Something bad happened; please try again later.")
   }
 }

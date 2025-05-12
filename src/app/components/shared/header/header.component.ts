@@ -1,6 +1,7 @@
 import { Component, Input, Output, EventEmitter } from "@angular/core"
 import { CommonModule } from "@angular/common"
 import { RouterModule } from "@angular/router"
+import { AuthService } from "../../../services/auth.service"
 
 @Component({
   selector: "app-header",
@@ -37,6 +38,16 @@ import { RouterModule } from "@angular/router"
           <ng-content></ng-content>
 
           <div class="header-actions">
+            <a [routerLink]="['/register']" class="register-link">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                <circle cx="8.5" cy="7" r="4"></circle>
+                <line x1="20" y1="8" x2="20" y2="14"></line>
+                <line x1="23" y1="11" x2="17" y2="11"></line>
+              </svg>
+              <span>Registrar Usuario</span>
+            </a>
+
             <button class="action-btn" title="Notifications">
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
@@ -70,6 +81,14 @@ import { RouterModule } from "@angular/router"
                 </svg>
               </button>
             </div>
+
+            <button class="logout-btn" (click)="logout()" title="Cerrar sesión">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                <polyline points="16 17 21 12 16 7"></polyline>
+                <line x1="21" y1="12" x2="9" y2="12"></line>
+              </svg>
+            </button>
           </div>
         </div>
       </div>
@@ -156,7 +175,7 @@ import { RouterModule } from "@angular/router"
       gap: 0.5rem;
     }
 
-    .action-btn {
+    .action-btn, .logout-btn, .theme-btn {
       display: flex;
       align-items: center;
       justify-content: center;
@@ -173,6 +192,13 @@ import { RouterModule } from "@angular/router"
       &:hover {
         background-color: #e2e8f0;
         color: #0f172a;
+      }
+    }
+
+    .logout-btn {
+      &:hover {
+        background-color: #fee2e2;
+        color: #ef4444;
       }
     }
 
@@ -196,22 +222,25 @@ import { RouterModule } from "@angular/router"
       margin-left: 0.5rem;
     }
 
-    .theme-btn {
+    .register-link {
       display: flex;
       align-items: center;
-      justify-content: center;
-      width: 40px;
-      height: 40px;
-      border-radius: 9999px;
-      background-color: #f1f5f9;
-      color: #475569;
-      border: none;
-      cursor: pointer;
-      transition: all 150ms ease;
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
+      background-color: #0a6cbc;
+      color: white;
+      border-radius: 0.375rem;
+      font-size: 0.875rem;
+      font-weight: 500;
+      text-decoration: none;
+      transition: background-color 150ms ease;
 
       &:hover {
-        background-color: #e2e8f0;
-        color: #0f172a;
+        background-color: #084e88;
+      }
+
+      svg {
+        flex-shrink: 0;
       }
     }
   `,
@@ -226,6 +255,8 @@ export class HeaderComponent {
   @Output() themeToggled = new EventEmitter<boolean>()
 
   isDarkMode = false
+
+  constructor(private authService: AuthService) {}
 
   ngOnInit(): void {
     // Check if dark mode is enabled
@@ -252,5 +283,9 @@ export class HeaderComponent {
     }
 
     this.themeToggled.emit(this.isDarkMode)
+  }
+
+  logout(): void {
+    this.authService.logout()
   }
 }
