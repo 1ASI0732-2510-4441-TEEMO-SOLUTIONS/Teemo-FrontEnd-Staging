@@ -1,9 +1,11 @@
-import { Component, type OnInit } from "@angular/core"
+import { Component, type OnInit, type AfterViewInit, type OnDestroy } from "@angular/core"
 import { CommonModule } from "@angular/common"
 import { RouterModule } from "@angular/router"
 import { FormsModule } from "@angular/forms"
 import { NearbyPortService, NearbyPort } from "../../../services/nearby-port.service"
+import { PortService, Port } from "../../../services/port.service"
 import * as L from "leaflet"
+import { Subscription } from "rxjs"
 
 @Component({
   selector: "app-nearby-ports",
@@ -472,6 +474,14 @@ import * as L from "leaflet"
       background-color: #1a73e8;
     }
 
+    .facility-customs {
+      background-color: #9c27b0;
+    }
+
+    .facility-security {
+      background-color: #607d8b;
+    }
+
     .facility-name {
       font-size: 0.9rem;
       color: #2c3e50;
@@ -561,7 +571,7 @@ import * as L from "leaflet"
   `,
   ],
 })
-export class NearbyPortsComponent implements OnInit {
+export class NearbyPortsComponent implements OnInit, AfterViewInit, OnDestroy {
   nearbyPorts: NearbyPort[] = []
   filteredPorts: NearbyPort[] = []
   selectedPort: NearbyPort | null = null
@@ -571,36 +581,83 @@ export class NearbyPortsComponent implements OnInit {
   private map!: L.Map
   private shipMarker!: L.Marker
   private portMarkers: L.Marker[] = []
+  private subscriptions: Subscription = new Subscription()
 
-  constructor(private nearbyPortService: NearbyPortService) {}
+  constructor(
+    private nearbyPortService: NearbyPortService,
+    private portService: PortService,
+  ) {}
 
   ngOnInit(): void {
     this.getCurrentLocation()
   }
 
+  ngAfterViewInit(): void {
+    // Inicializar el mapa después de que la vista esté lista
+    setTimeout(() => {
+      if (this.currentLocation) {
+        this.initMap()
+      }
+    }, 100)
+  }
+
+  ngOnDestroy(): void {
+    // Limpiar suscripciones
+    this.subscriptions.unsubscribe()
+
+    // Destruir el mapa si existe
+    if (this.map) {
+      this.map.remove()
+    }
+  }
+
   getCurrentLocation(): void {
     this.loading = true
-    this.nearbyPortService.getCurrentLocation().subscribe({
+    const subscription = this.nearbyPortService.getCurrentLocation().subscribe({
       next: (location) => {
         this.currentLocation = location
-        this.initMap()
-        this.loadNearbyPorts()
+
+        // Inicializar el mapa si la vista ya está lista
+        setTimeout(() => {
+          this.initMap()
+          this.loadNearbyPorts()
+        }, 100)
       },
       error: (err) => {
         console.error("Error al obtener la ubicación actual:", err)
-        this.loading = false
+        // Usar una ubicación predeterminada en caso de error
+        this.currentLocation = { latitude: 1.29027, longitude: 103.851959 } // Singapore
+
+        setTimeout(() => {
+          this.initMap()
+          this.loadNearbyPorts()
+        }, 100)
       },
     })
+
+    this.subscriptions.add(subscription)
   }
 
   loadNearbyPorts(): void {
     if (!this.currentLocation) return
 
-    this.nearbyPortService.getNearbyPorts(this.currentLocation.latitude, this.currentLocation.longitude).subscribe({
+    this.loading = true
+
+    // Usar el servicio de puertos mejorado para obtener todos los puertos
+    const subscription = this.portService.getAllPorts().subscribe({
       next: (ports) => {
-        this.nearbyPorts = ports
-        this.filteredPorts = [...ports]
+        console.log("Puertos obtenidos para nearby-ports:", ports)
+
+        // Convertir los puertos a formato NearbyPort y calcular distancias
+        this.nearbyPorts = ports.map((port) => this.convertToNearbyPort(port))
+
+        // Ordenar por distancia
+        this.nearbyPorts.sort((a, b) => a.distance - b.distance)
+
+        this.filteredPorts = [...this.nearbyPorts]
         this.loading = false
+
+        // Añadir puertos al mapa
         this.addPortsToMap()
       },
       error: (err) => {
@@ -608,6 +665,68 @@ export class NearbyPortsComponent implements OnInit {
         this.loading = false
       },
     })
+
+    this.subscriptions.add(subscription)
+  }
+
+  // Método para convertir un Puerto a formato NearbyPort con distancia calculada
+  private convertToNearbyPort(port: Port): NearbyPort {
+    const distance = this.calculateDistance(
+      this.currentLocation!.latitude,
+      this.currentLocation!.longitude,
+      port.latitude,
+      port.longitude,
+    )
+
+    return {
+      id: port.id,
+      name: port.name,
+      country: port.continent, // Usar continente como país por ahora
+      latitude: port.latitude,
+      longitude: port.longitude,
+      distance: distance,
+      status: Math.random() > 0.3 ? "open" : "closed", // Estado aleatorio para demostración
+      facilities: this.getRandomFacilities(),
+      maxDepth: Math.floor(Math.random() * 10) + 10, // Profundidad aleatoria entre 10-20m
+      contactInfo: {
+        phone: `+${Math.floor(Math.random() * 100)} ${Math.floor(Math.random() * 10000)} ${Math.floor(Math.random() * 10000)}`,
+        email: `port@${port.name.toLowerCase().replace(/\s/g, "")}.com`,
+        vhfChannel: `${Math.floor(Math.random() * 16) + 1}`,
+      },
+    }
+  }
+
+  // Método para calcular la distancia entre dos puntos usando la fórmula de Haversine
+  private calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+    const R = 3440.07 // Radio de la Tierra en millas náuticas
+    const dLat = this.toRad(lat2 - lat1)
+    const dLon = this.toRad(lon2 - lon1)
+
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(this.toRad(lat1)) * Math.cos(this.toRad(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2)
+
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+    return R * c
+  }
+
+  private toRad(value: number): number {
+    return (value * Math.PI) / 180
+  }
+
+  private getRandomFacilities(): string[] {
+    const allFacilities = ["Fuel", "Repairs", "Medical", "Supplies", "Customs", "Security"]
+    const numFacilities = Math.floor(Math.random() * 4) + 1 // 1-4 instalaciones
+    const facilities: string[] = []
+
+    for (let i = 0; i < numFacilities; i++) {
+      const facility = allFacilities[Math.floor(Math.random() * allFacilities.length)]
+      if (!facilities.includes(facility)) {
+        facilities.push(facility)
+      }
+    }
+
+    return facilities
   }
 
   filterPorts(): void {
@@ -616,7 +735,7 @@ export class NearbyPortsComponent implements OnInit {
       return
     }
 
-    const term = this.searchTerm.toLowerCase().trim()
+    const term = this.searchTerm.toLowerCase()
     this.filteredPorts = this.nearbyPorts.filter(
       (port) => port.name.toLowerCase().includes(term) || port.country.toLowerCase().includes(term),
     )
@@ -640,7 +759,12 @@ export class NearbyPortsComponent implements OnInit {
   }
 
   private initMap(): void {
-    if (!this.currentLocation) return
+    if (!this.currentLocation || document.getElementById("nearby-ports-map") === null) return
+
+    // Verificar si el mapa ya existe
+    if (this.map) {
+      this.map.remove()
+    }
 
     // Crear el mapa
     this.map = L.map("nearby-ports-map", {
@@ -663,7 +787,10 @@ export class NearbyPortsComponent implements OnInit {
       iconAnchor: [10, 10],
     })
 
-    this.shipMarker = L.marker([this.currentLocation.latitude, this.currentLocation.longitude], { icon: shipIcon })
+    this.shipMarker = L.marker([this.currentLocation.latitude, this.currentLocation.longitude], {
+      icon: shipIcon,
+      title: "Mi Ubicación",
+    })
       .addTo(this.map)
       .bindPopup("<strong>Mi Ubicación Actual</strong>")
 
@@ -672,6 +799,8 @@ export class NearbyPortsComponent implements OnInit {
   }
 
   private addPortsToMap(): void {
+    if (!this.map || !this.nearbyPorts.length) return
+
     // Limpiar marcadores existentes
     this.clearPortMarkers()
 

@@ -1,1 +1,53 @@
-/* You can add global styles to this file, and also import other style files */
+/* Estilos globales para Leaflet */
+.leaflet-container {
+  height: 100%;
+  width: 100%;
+}
+
+.leaflet-div-icon {
+  background: transparent;
+  border: none;
+}
+
+/* Estilos para los popups de Leaflet */
+.leaflet-popup-content-wrapper {
+  border-radius: 4px;
+  padding: 0;
+}
+
+.leaflet-popup-content {
+  margin: 10px;
+  line-height: 1.4;
+}
+
+.leaflet-popup-content b {
+  color: #2c3e50;
+  display: block;
+  margin-bottom: 5px;
+}
+
+/* Estilos para los marcadores personalizados */
+.ship-icon {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background-color: #ea4335;
+  border: 2px solid white;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.4);
+}
+
+.port-icon {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid white;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.4);
+}
+
+.port-open {
+  background-color: #34a853;
+}
+
+.port-closed {
+  background-color: #ea4335;
+}

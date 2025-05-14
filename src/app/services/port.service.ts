@@ -1,8 +1,9 @@
 import { Injectable } from "@angular/core"
-import { HttpClient, HttpErrorResponse } from "@angular/common/http"
-import { type Observable, of } from "rxjs"
+import { HttpClient, type HttpErrorResponse, HttpHeaders } from "@angular/common/http"
+import { Observable, of } from "rxjs"
 import { catchError, tap } from "rxjs/operators"
 import { environment } from "../../environments/environment"
+import { AuthService } from "./auth.service"
 
 export interface Port {
   id: number
@@ -92,21 +93,75 @@ export class PortService {
     },
   ]
 
-  constructor(private http: HttpClient) {}
+  constructor(
+    private http: HttpClient,
+    private authService: AuthService,
+  ) {}
 
   getAllPorts(): Observable<Port[]> {
-    // Intentar obtener los puertos del backend
-    return this.http.get<Port[]>(this.apiUrl).pipe(
+    console.log("Obteniendo puertos desde:", this.apiUrl)
+
+    // Obtener el token de autenticación
+    const token = this.authService.getToken()
+
+    // Configurar los headers con el token de autenticación
+    const headers = new HttpHeaders({
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    })
+
+    // Intentar obtener los puertos del backend con los headers de autenticación
+    return this.http.get<Port[]>(this.apiUrl, { headers }).pipe(
       tap((ports) => {
         console.log("Puertos obtenidos del backend:", ports)
       }),
       catchError((error: HttpErrorResponse) => {
         console.error("Error al obtener puertos del backend:", error)
 
-        // Si hay un error de autenticación (401) o cualquier otro error,
-        // devolver los puertos de respaldo
+        if (error.status === 401) {
+          console.warn("Error de autenticación (401) al obtener puertos. Verificar token.")
+        }
+
+        // Si hay un error, devolver los puertos de respaldo
         console.log("Usando puertos de respaldo debido a error:", error.status)
         return of(this.fallbackPorts)
+      }),
+    )
+  }
+
+  // Método para obtener un puerto específico por ID
+  getPortById(id: number): Observable<Port | undefined> {
+    // Primero intentamos obtener del backend
+    return this.http.get<Port>(`${this.apiUrl}/${id}`).pipe(
+      catchError((error: HttpErrorResponse) => {
+        console.error(`Error al obtener puerto con ID ${id}:`, error)
+
+        // Si hay un error, buscamos en los datos de respaldo
+        const fallbackPort = this.fallbackPorts.find((port) => port.id === id)
+        return of(fallbackPort)
+      }),
+    )
+  }
+
+  // Método para buscar puertos por nombre o continente
+  searchPorts(term: string): Observable<Port[]> {
+    if (!term.trim()) {
+      // Si no hay término de búsqueda, devolver todos los puertos
+      return this.getAllPorts()
+    }
+
+    const searchTerm = term.toLowerCase()
+
+    // Intentar buscar en el backend
+    return this.http.get<Port[]>(`${this.apiUrl}/search?term=${searchTerm}`).pipe(
+      catchError((error: HttpErrorResponse) => {
+        console.error(`Error al buscar puertos con término "${term}":`, error)
+
+        // Si hay un error, buscar en los datos de respaldo
+        const filteredPorts = this.fallbackPorts.filter(
+          (port) => port.name.toLowerCase().includes(searchTerm) || port.continent.toLowerCase().includes(searchTerm),
+        )
+        return of(filteredPorts)
       }),
     )
   }

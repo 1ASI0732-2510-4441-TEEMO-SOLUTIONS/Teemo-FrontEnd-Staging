@@ -1,6 +1,6 @@
 import { Component, type OnInit, Output, EventEmitter } from "@angular/core"
 import { CommonModule } from "@angular/common"
-import { FormBuilder, type FormGroup, ReactiveFormsModule, Validators } from "@angular/forms"
+import {  FormBuilder, type FormGroup, ReactiveFormsModule, Validators } from "@angular/forms"
 import { PortService, Port } from "../../../services/port.service"
 
 @Component({
@@ -72,157 +72,180 @@ import { PortService, Port } from "../../../services/port.service"
 
         <div class="form-actions">
           <button type="button" class="btn-cancel" (click)="onCancel()">Cancelar</button>
+          <button type="submit" class="btn-primary" [disabled]="routeForm.invalid" (click)="onSubmit()">
+            Planificar Ruta
+          </button>
         </div>
       </form>
     </div>
   `,
   styles: [
     `
-    .port-selector-container {
-      background-color: white;
-      border-radius: 8px;
-      padding: 1.5rem;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    }
-
-    h3 {
-      margin-top: 0;
-      margin-bottom: 1.5rem;
-      color: #2c3e50;
-      font-size: 1.2rem;
-    }
-
-    .loading-indicator {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      color: #5f6368;
-    }
-
-    .spinner {
-      width: 20px;
-      height: 20px;
-      border: 2px solid rgba(0, 0, 0, 0.1);
-      border-radius: 50%;
-      border-top-color: #1a73e8;
-      animation: spin 0.8s linear infinite;
-    }
-
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-
-    .error-message {
-      padding: 0.75rem;
-      background-color: rgba(234, 67, 53, 0.1);
-      color: #ea4335;
-      border-radius: 4px;
-      margin-bottom: 1rem;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .info-message {
-      padding: 0.75rem;
-      background-color: rgba(66, 133, 244, 0.1);
-      color: #4285f4;
-      border-radius: 4px;
-      margin-bottom: 1rem;
-    }
-
-    .retry-button {
-      background-color: #ea4335;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      padding: 0.25rem 0.5rem;
-      font-size: 0.8rem;
-      cursor: pointer;
-    }
-
-    .form-group {
-      margin-bottom: 1rem;
-    }
-
-    label {
-      display: block;
-      margin-bottom: 0.5rem;
-      font-weight: 500;
-      color: #2c3e50;
-      font-size: 0.9rem;
-    }
-
-    .form-control {
-      width: 100%;
-      padding: 0.75rem;
-      border: 1px solid #e0e0e0;
-      border-radius: 4px;
-      font-size: 0.9rem;
-
-      &:focus {
-        outline: none;
-        border-color: #1a73e8;
-        box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.1);
+      .port-selector-container {
+        background-color: white;
+        border-radius: 8px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
       }
-    }
 
-    .validation-error {
-      color: #ea4335;
-      font-size: 0.8rem;
-      margin-top: 0.25rem;
-    }
-
-    .form-actions {
-      display: flex;
-      justify-content: flex-end;
-      gap: 1rem;
-      margin-top: 1.5rem;
-    }
-
-    .btn-cancel {
-      padding: 0.75rem 1.5rem;
-      background-color: #f1f3f4;
-      color: #5f6368;
-      border: none;
-      border-radius: 4px;
-      font-size: 0.9rem;
-      cursor: pointer;
-
-      &:hover {
-        background-color: #e8eaed;
+      h3 {
+        margin-top: 0;
+        margin-bottom: 1.5rem;
+        color: #2c3e50;
+        font-size: 1.2rem;
       }
-    }
 
-    .port-info {
-      margin-top: 2rem;
-      padding: 1rem;
-      background-color: #f8f9fa;
-      border-radius: 4px;
-      border-left: 4px solid #1a73e8;
-    }
+      .loading-indicator {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: #5f6368;
+      }
 
-    .port-info h4 {
-      margin-top: 0;
-      margin-bottom: 0.75rem;
-      color: #2c3e50;
-      font-size: 1rem;
-    }
+      .spinner {
+        width: 20px;
+        height: 20px;
+        border: 2px solid rgba(0, 0, 0, 0.1);
+        border-radius: 50%;
+        border-top-color: #1a73e8;
+        animation: spin 0.8s linear infinite;
+      }
 
-    .distance-info, .continent-info {
-      margin-bottom: 0.5rem;
-      font-size: 0.9rem;
-      color: #5f6368;
-    }
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
 
-    .continent-info {
-      color: #fbbc05;
-    }
-  `,
+      .error-message {
+        padding: 0.75rem;
+        background-color: rgba(234, 67, 53, 0.1);
+        color: #ea4335;
+        border-radius: 4px;
+        margin-bottom: 1rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .info-message {
+        padding: 0.75rem;
+        background-color: rgba(66, 133, 244, 0.1);
+        color: #4285f4;
+        border-radius: 4px;
+        margin-bottom: 1rem;
+      }
+
+      .retry-button {
+        background-color: #ea4335;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        padding: 0.25rem 0.5rem;
+        font-size: 0.8rem;
+        cursor: pointer;
+      }
+
+      .form-group {
+        margin-bottom: 1rem;
+      }
+
+      label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+        color: #2c3e50;
+        font-size: 0.9rem;
+      }
+
+      .form-control {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid #e0e0e0;
+        border-radius: 4px;
+        font-size: 0.9rem;
+
+        &:focus {
+          outline: none;
+          border-color: #1a73e8;
+          box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.1);
+        }
+      }
+
+      .validation-error {
+        color: #ea4335;
+        font-size: 0.8rem;
+        margin-top: 0.25rem;
+      }
+
+      .form-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 1rem;
+        margin-top: 1.5rem;
+      }
+
+      .btn-cancel {
+        padding: 0.75rem 1.5rem;
+        background-color: #f1f3f4;
+        color: #5f6368;
+        border: none;
+        border-radius: 4px;
+        font-size: 0.9rem;
+        cursor: pointer;
+
+        &:hover {
+          background-color: #e8eaed;
+        }
+      }
+
+      .btn-primary {
+        padding: 0.75rem 1.5rem;
+        background-color: #1a73e8;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        font-size: 0.9rem;
+        cursor: pointer;
+
+        &:hover {
+          background-color: #1557b0;
+        }
+
+        &:disabled {
+          background-color: #a8c7fa;
+          cursor: not-allowed;
+        }
+      }
+
+      .port-info {
+        margin-top: 2rem;
+        padding: 1rem;
+        background-color: #f8f9fa;
+        border-radius: 4px;
+        border-left: 4px solid #1a73e8;
+      }
+
+      .port-info h4 {
+        margin-top: 0;
+        margin-bottom: 0.75rem;
+        color: #2c3e50;
+        font-size: 1rem;
+      }
+
+      .distance-info, .continent-info {
+        margin-bottom: 0.5rem;
+        font-size: 0.9rem;
+        color: #5f6368;
+      }
+
+      .continent-info {
+        color: #fbbc05;
+      }
+    `,
   ],
 })
 export class PortSelectorComponent implements OnInit {
   @Output() cancel = new EventEmitter<void>()
+  @Output() submitRoute = new EventEmitter<any>()
 
   ports: Port[] = []
   routeForm: FormGroup
@@ -269,7 +292,7 @@ export class PortSelectorComponent implements OnInit {
         console.error("Error al cargar puertos:", err)
 
         // Mensaje de error más específico para problemas de autenticación
-        if (err.message && err.message.includes("No autorizado")) {
+        if (err.status === 401) {
           this.error =
             "No se pudo acceder a los puertos. Problema de autenticación. Por favor, inicie sesión nuevamente."
         } else {
@@ -283,6 +306,21 @@ export class PortSelectorComponent implements OnInit {
 
   onCancel(): void {
     this.cancel.emit()
+  }
+
+  onSubmit(): void {
+    if (this.routeForm.valid && this.selectedOriginPort && this.selectedDestinationPort) {
+      const routeData = {
+        originPortId: this.selectedOriginPort.id,
+        originPortName: this.selectedOriginPort.name,
+        destinationPortId: this.selectedDestinationPort.id,
+        destinationPortName: this.selectedDestinationPort.name,
+        distance: this.calculateDistance(),
+        isCrossContinental: this.isCrossContinental(),
+      }
+
+      this.submitRoute.emit(routeData)
+    }
   }
 
   calculateDistance(): number {
@@ -308,7 +346,6 @@ export class PortSelectorComponent implements OnInit {
     return distance
   }
 
-  // Corregido para devolver un booleano
   isCrossContinental(): boolean {
     return !!(
       this.selectedOriginPort &&
