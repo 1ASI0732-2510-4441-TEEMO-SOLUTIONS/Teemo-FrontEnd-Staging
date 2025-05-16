@@ -264,13 +264,12 @@ export class PortSelectorComponent implements OnInit {
       destinationPortId: ["", Validators.required],
     })
 
-    // Escuchar cambios para actualizar los puertos seleccionados
     this.routeForm.get("originPortId")?.valueChanges.subscribe((id) => {
-      this.selectedOriginPort = this.ports.find((p) => p.id === Number(id)) || null
+      this.selectedOriginPort = this.ports.find((p) => p.id === id) || null
     })
 
     this.routeForm.get("destinationPortId")?.valueChanges.subscribe((id) => {
-      this.selectedDestinationPort = this.ports.find((p) => p.id === Number(id)) || null
+      this.selectedDestinationPort = this.ports.find((p) => p.id === id) || null
     })
   }
 
