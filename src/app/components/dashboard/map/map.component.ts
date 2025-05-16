@@ -146,15 +146,15 @@ export class MapComponent implements OnInit, AfterViewInit, OnDestroy {
       })
 
       // Crear marcador y añadirlo al mapa
-      const marker = L.marker([port.latitude, port.longitude], { icon: portIcon })
+      const marker = L.marker([port.coordinates.latitude, port.coordinates.longitude], { icon: portIcon })
         .addTo(this.map)
         .bindPopup(`
-          <div class="port-popup">
-            <h4>${port.name}</h4>
-            <p>Continente: ${port.continent || "Desconocido"}</p>
-            <p>Coordenadas: ${port.latitude.toFixed(4)}, ${port.longitude.toFixed(4)}</p>
-          </div>
-        `)
+        <div class="port-popup">
+          <h4>${port.name}</h4>
+          <p>Continente: ${port.continent || "Desconocido"}</p>
+          <p>Coordenadas: ${port.coordinates.latitude.toFixed(4)}, ${port.coordinates.longitude.toFixed(4)}</p>
+        </div>
+      `)
 
       // Guardar referencia al marcador
       this.portMarkers.push(marker)

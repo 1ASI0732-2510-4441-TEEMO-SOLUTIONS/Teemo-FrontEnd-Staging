@@ -118,9 +118,9 @@ import { environment } from "../../../../environments/environment"
                 [ngClass]="{'is-invalid': submitted && f['role'].errors}"
               >
                 <option value="">Seleccione un rol</option>
-                <option value="USER">Usuario</option>
-                <option value="CAPTAIN">Capitán</option>
-                <option value="ADMIN">Administrador</option>
+                <option value="ROLE_USER">Usuario</option>
+                <option value="ROLE_ADMIN">Administrador</option>
+                <option value="ROLE_INSTRUCTOR">Instructor</option>
               </select>
             </div>
             <div *ngIf="submitted && f['role'].errors" class="error-message">
@@ -160,224 +160,224 @@ import { environment } from "../../../../environments/environment"
   `,
   styles: [
     `
-    .register-container {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 100vh;
-      background-color: #f8fafc;
-      padding: 1rem;
-    }
-
-    .register-card {
-      width: 100%;
-      max-width: 450px;
-      background-color: white;
-      border-radius: 0.5rem;
-      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-      overflow: hidden;
-    }
-
-    .register-header {
-      padding: 2rem 2rem 1rem;
-      text-align: center;
-    }
-
-    .logo {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin-bottom: 1.5rem;
-    }
-
-    .logo-icon {
-      color: #0a6cbc;
-    }
-
-    .logo-text {
-      font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-      font-weight: 700;
-      font-size: 1.25rem;
-      color: #0f172a;
-      margin-left: 0.5rem;
-    }
-
-    .register-header h1 {
-      margin: 0 0 0.5rem 0;
-      font-size: 1.5rem;
-      color: #0f172a;
-    }
-
-    .register-header p {
-      margin: 0;
-      color: #64748b;
-      font-size: 0.875rem;
-    }
-
-    .register-form {
-      padding: 1.5rem 2rem;
-    }
-
-    .form-group {
-      margin-bottom: 1.5rem;
-    }
-
-    label {
-      display: block;
-      margin-bottom: 0.5rem;
-      font-size: 0.875rem;
-      font-weight: 500;
-      color: #0f172a;
-    }
-
-    .input-container {
-      position: relative;
-    }
-
-    .input-icon {
-      position: absolute;
-      left: 1rem;
-      top: 50%;
-      transform: translateY(-50%);
-      color: #64748b;
-    }
-
-    input[type="text"],
-    input[type="password"],
-    select {
-      width: 100%;
-      padding: 0.75rem 1rem 0.75rem 2.5rem;
-      border: 1px solid #cbd5e1;
-      border-radius: 0.375rem;
-      font-size: 0.875rem;
-      transition: all 150ms ease;
-
-      &:focus {
-        outline: none;
-        border-color: #0a6cbc;
-        box-shadow: 0 0 0 2px rgba(10, 108, 188, 0.1);
+      .register-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        background-color: #f8fafc;
+        padding: 1rem;
       }
 
-      &.is-invalid {
-        border-color: #ef4444;
+      .register-card {
+        width: 100%;
+        max-width: 450px;
+        background-color: white;
+        border-radius: 0.5rem;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        overflow: hidden;
       }
-    }
 
-    .password-toggle {
-      position: absolute;
-      right: 1rem;
-      top: 50%;
-      transform: translateY(-50%);
-      background: none;
-      border: none;
-      color: #64748b;
-      cursor: pointer;
-      padding: 0;
+      .register-header {
+        padding: 2rem 2rem 1rem;
+        text-align: center;
+      }
 
-      &:hover {
+      .logo {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 1.5rem;
+      }
+
+      .logo-icon {
+        color: #0a6cbc;
+      }
+
+      .logo-text {
+        font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+        font-weight: 700;
+        font-size: 1.25rem;
+        color: #0f172a;
+        margin-left: 0.5rem;
+      }
+
+      .register-header h1 {
+        margin: 0 0 0.5rem 0;
+        font-size: 1.5rem;
         color: #0f172a;
       }
-    }
 
-    .terms-checkbox {
-      display: flex;
-      align-items: center;
+      .register-header p {
+        margin: 0;
+        color: #64748b;
+        font-size: 0.875rem;
+      }
 
-      input[type="checkbox"] {
-        margin-right: 0.5rem;
+      .register-form {
+        padding: 1.5rem 2rem;
+      }
+
+      .form-group {
+        margin-bottom: 1.5rem;
       }
 
       label {
-        margin-bottom: 0;
-        color: #64748b;
-      }
-    }
-
-    .alert-error {
-      padding: 0.75rem 1rem;
-      background-color: rgba(239, 68, 68, 0.1);
-      color: #ef4444;
-      border-radius: 0.375rem;
-      margin-bottom: 1.5rem;
-      font-size: 0.875rem;
-    }
-
-    .alert-success {
-      padding: 0.75rem 1rem;
-      background-color: rgba(34, 197, 94, 0.1);
-      color: #22c55e;
-      border-radius: 0.375rem;
-      margin-top: 1rem;
-      font-size: 0.875rem;
-    }
-
-    .register-btn {
-      width: 100%;
-      padding: 0.75rem 1rem;
-      border: none;
-      border-radius: 0.375rem;
-      font-size: 0.875rem;
-      font-weight: 500;
-      cursor: pointer;
-      transition: background-color 150ms ease;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 2.75rem;
-      background-color: #0a6cbc;
-      color: white;
-
-      &:hover {
-        background-color: #084e88;
-      }
-
-      &:disabled {
-        background-color: #6b9ecf;
-        cursor: not-allowed;
-      }
-    }
-
-    .spinner {
-      width: 1.25rem;
-      height: 1.25rem;
-      border: 2px solid rgba(255, 255, 255, 0.3);
-      border-radius: 50%;
-      border-top-color: white;
-      animation: spin 1s linear infinite;
-    }
-
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-
-    .error-message {
-      color: #ef4444;
-      font-size: 0.75rem;
-      margin-top: 0.25rem;
-    }
-
-    .register-footer {
-      padding: 1.5rem 2rem;
-      border-top: 1px solid #e2e8f0;
-      background-color: #f8fafc;
-      text-align: center;
-
-      p {
-        margin: 0;
+        display: block;
+        margin-bottom: 0.5rem;
         font-size: 0.875rem;
+        font-weight: 500;
+        color: #0f172a;
+      }
+
+      .input-container {
+        position: relative;
+      }
+
+      .input-icon {
+        position: absolute;
+        left: 1rem;
+        top: 50%;
+        transform: translateY(-50%);
         color: #64748b;
       }
 
-      a {
-        color: #0a6cbc;
-        text-decoration: none;
-        font-weight: 500;
+      input[type="text"],
+      input[type="password"],
+      select {
+        width: 100%;
+        padding: 0.75rem 1rem 0.75rem 2.5rem;
+        border: 1px solid #cbd5e1;
+        border-radius: 0.375rem;
+        font-size: 0.875rem;
+        transition: all 150ms ease;
 
-        &:hover {
-          text-decoration: underline;
+        &:focus {
+          outline: none;
+          border-color: #0a6cbc;
+          box-shadow: 0 0 0 2px rgba(10, 108, 188, 0.1);
+        }
+
+        &.is-invalid {
+          border-color: #ef4444;
         }
       }
-    }
+
+      .password-toggle {
+        position: absolute;
+        right: 1rem;
+        top: 50%;
+        transform: translateY(-50%);
+        background: none;
+        border: none;
+        color: #64748b;
+        cursor: pointer;
+        padding: 0;
+
+        &:hover {
+          color: #0f172a;
+        }
+      }
+
+      .terms-checkbox {
+        display: flex;
+        align-items: center;
+
+        input[type="checkbox"] {
+          margin-right: 0.5rem;
+        }
+
+        label {
+          margin-bottom: 0;
+          color: #64748b;
+        }
+      }
+
+      .alert-error {
+        padding: 0.75rem 1rem;
+        background-color: rgba(239, 68, 68, 0.1);
+        color: #ef4444;
+        border-radius: 0.375rem;
+        margin-bottom: 1.5rem;
+        font-size: 0.875rem;
+      }
+
+      .alert-success {
+        padding: 0.75rem 1rem;
+        background-color: rgba(34, 197, 94, 0.1);
+        color: #22c55e;
+        border-radius: 0.375rem;
+        margin-top: 1rem;
+        font-size: 0.875rem;
+      }
+
+      .register-btn {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border: none;
+        border-radius: 0.375rem;
+        font-size: 0.875rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background-color 150ms ease;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 2.75rem;
+        background-color: #0a6cbc;
+        color: white;
+
+        &:hover {
+          background-color: #084e88;
+        }
+
+        &:disabled {
+          background-color: #6b9ecf;
+          cursor: not-allowed;
+        }
+      }
+
+      .spinner {
+        width: 1.25rem;
+        height: 1.25rem;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        border-radius: 50%;
+        border-top-color: white;
+        animation: spin 1s linear infinite;
+      }
+
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+
+      .error-message {
+        color: #ef4444;
+        font-size: 0.75rem;
+        margin-top: 0.25rem;
+      }
+
+      .register-footer {
+        padding: 1.5rem 2rem;
+        border-top: 1px solid #e2e8f0;
+        background-color: #f8fafc;
+        text-align: center;
+
+        p {
+          margin: 0;
+          font-size: 0.875rem;
+          color: #64748b;
+        }
+
+        a {
+          color: #0a6cbc;
+          text-decoration: none;
+          font-weight: 500;
+
+          &:hover {
+            text-decoration: underline;
+          }
+        }
+      }
     `,
   ],
 })
@@ -429,11 +429,14 @@ export class RegisterComponent implements OnInit {
     this.success = ""
 
     // Preparar los datos para el registro
+    // Use the exact role value from the form - it now matches the backend enum
     const registerData = {
       username: this.f["username"].value,
       password: this.f["password"].value,
-      roles: [this.f["role"].value], // Convertir a array como espera el backend
+      roles: [this.f["role"].value], // Use the exact enum value
     }
+
+    console.log("Sending registration data:", registerData)
 
     // Verificar si estamos en modo de prueba (sin backend real)
     if (environment.mockBackend) {

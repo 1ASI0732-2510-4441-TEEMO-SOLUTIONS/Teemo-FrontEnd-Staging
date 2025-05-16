@@ -669,21 +669,21 @@ export class NearbyPortsComponent implements OnInit, AfterViewInit, OnDestroy {
     this.subscriptions.add(subscription)
   }
 
-  // Método para convertir un Puerto a formato NearbyPort con distancia calculada
+
   private convertToNearbyPort(port: Port): NearbyPort {
     const distance = this.calculateDistance(
       this.currentLocation!.latitude,
       this.currentLocation!.longitude,
-      port.latitude,
-      port.longitude,
+      port.coordinates.latitude,
+      port.coordinates.longitude,
     )
 
     return {
-      id: port.id,
+      id: Number(port.id), // Convertir id a número
       name: port.name,
       country: port.continent, // Usar continente como país por ahora
-      latitude: port.latitude,
-      longitude: port.longitude,
+      latitude: port.coordinates.latitude, // Acceder a latitude desde coordinates
+      longitude: port.coordinates.longitude, // Acceder a longitude desde coordinates
       distance: distance,
       status: Math.random() > 0.3 ? "open" : "closed", // Estado aleatorio para demostración
       facilities: this.getRandomFacilities(),

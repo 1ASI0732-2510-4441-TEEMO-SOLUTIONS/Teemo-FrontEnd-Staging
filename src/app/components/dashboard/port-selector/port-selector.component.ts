@@ -329,13 +329,12 @@ export class PortSelectorComponent implements OnInit {
 
     // Fórmula de Haversine para calcular la distancia entre dos puntos en la Tierra
     const R = 3440.07 // Radio de la Tierra en millas náuticas
-    const dLat = this.toRad(this.selectedDestinationPort.latitude - this.selectedOriginPort.latitude)
-    const dLon = this.toRad(this.selectedDestinationPort.longitude - this.selectedOriginPort.longitude)
-
+    const dLat = this.toRad(this.selectedDestinationPort.coordinates.latitude - this.selectedOriginPort.coordinates.latitude)
+    const dLon = this.toRad(this.selectedDestinationPort.coordinates.longitude - this.selectedOriginPort.coordinates.longitude)
     const a =
       Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(this.toRad(this.selectedOriginPort.latitude)) *
-      Math.cos(this.toRad(this.selectedDestinationPort.latitude)) *
+      Math.cos(this.toRad(this.selectedOriginPort.coordinates.latitude)) *
+      Math.cos(this.toRad(this.selectedDestinationPort.coordinates.latitude)) *
       Math.sin(dLon / 2) *
       Math.sin(dLon / 2)
 

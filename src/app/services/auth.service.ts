@@ -1,8 +1,8 @@
 import { Injectable } from "@angular/core"
-import  { HttpClient } from "@angular/common/http"
+import { HttpClient } from "@angular/common/http"
 import { BehaviorSubject, type Observable, throwError } from "rxjs"
 import { catchError, map } from "rxjs/operators"
-import  { Router } from "@angular/router"
+import { Router } from "@angular/router"
 import { environment } from "../../environments/environment"
 
 export interface User {
@@ -37,7 +37,7 @@ export interface SignUpRequest {
 })
 export class AuthService {
   // Cambiamos la URL para que coincida con el backend
-  private apiUrl = `${environment.apiUrl}/api/v1/authentication`
+  private apiUrl = `${environment.apiUrl}/api/authentication`
   private tokenKey = "maritime_auth_token"
   private userKey = "maritime_user"
   private currentUserSubject: BehaviorSubject<User | null>
@@ -61,22 +61,21 @@ export class AuthService {
     return !!this.currentUserValue && !!this.getToken()
   }
 
+  // Update the login method to match the backend's expected format and response
   login(credentials: LoginRequest): Observable<User> {
-    // Llamada al endpoint de inicio de sesión del backend
+    // Calling the endpoint that matches the backend's AuthenticationController
     return this.http.post<LoginResponse>(`${this.apiUrl}/sign-in`, credentials).pipe(
       map((response) => {
-        // Extraer el usuario y el token de la respuesta
+        // Extract the user and token from the response
         const user: User = {
           id: response.id,
           username: response.username,
-          // Si el backend no proporciona un nombre, usar el username
-          name: response.username,
-          // Asignar un rol predeterminado
-          role: "Usuario",
+          name: response.username, // If the backend doesn't provide a name, use the username
+          role: "Usuario", // Assign a default role
           token: response.token,
         }
 
-        // Guardar token y usuario
+        // Save token and user
         this.setToken(response.token)
         this.setUser(user)
         this.currentUserSubject.next(user)
@@ -103,6 +102,9 @@ export class AuthService {
 
   // Modificar el método register para manejar mejor los errores
   register(signUpRequest: SignUpRequest): Observable<User> {
+    // No need to modify the roles - we're now sending the exact enum values from the form
+    console.log("Sending to backend:", signUpRequest)
+
     // Llamada al endpoint de registro del backend
     return this.http.post<User>(`${this.apiUrl}/sign-up`, signUpRequest).pipe(
       catchError((error) => {
@@ -117,6 +119,11 @@ export class AuthService {
           errorMessage = "El nombre de usuario ya existe"
         } else if (error.status === 401) {
           errorMessage = "No se pudo registrar el usuario. El endpoint requiere autenticación."
+        } else if (error.status === 500) {
+          errorMessage =
+            error.error && error.error.message
+              ? error.error.message
+              : "Error interno del servidor. Por favor contacte al administrador."
         } else if (error.status === 0) {
           errorMessage = "No se pudo conectar al servidor. Verifique su conexión a internet."
         }
@@ -148,14 +155,11 @@ export class AuthService {
 
   private getRoleFromRoles(roles: string[]): string {
     // Prioridad de roles (de mayor a menor)
-    const rolePriority = ["ADMIN", "CAPTAIN", "USER"]
-
-    // Convertir todos los roles a mayúsculas para comparación
-    const upperRoles = roles.map((role) => role.toUpperCase())
+    const rolePriority = ["ROLE_ADMIN", "ROLE_INSTRUCTOR", "ROLE_USER"]
 
     // Buscar el rol de mayor prioridad
     for (const role of rolePriority) {
-      if (upperRoles.includes(role)) {
+      if (roles.includes(role)) {
         return this.formatRoleName(role)
       }
     }
@@ -166,7 +170,9 @@ export class AuthService {
 
   // Método para formatear el nombre del rol (primera letra mayúscula, resto minúsculas)
   private formatRoleName(role: string): string {
-    return role.charAt(0).toUpperCase() + role.slice(1).toLowerCase()
+    // Remove the ROLE_ prefix and capitalize the first letter
+    const roleName = role.replace("ROLE_", "")
+    return roleName.charAt(0).toUpperCase() + roleName.slice(1).toLowerCase()
   }
 
   // Verificar si el token ha expirado
