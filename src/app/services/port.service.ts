@@ -3,7 +3,7 @@ import {  HttpClient, type HttpErrorResponse, HttpHeaders } from "@angular/commo
 import {  Observable, of } from "rxjs"
 import { catchError, tap } from "rxjs/operators"
 import { environment } from "../../environments/environment"
-import  { AuthService } from "./auth.service"
+import { AuthService } from "./auth.service"
 
 export interface Port {
   id: string

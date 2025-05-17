@@ -1,20 +1,21 @@
-import { Component, Input } from "@angular/core"
+import {Component, Input, OnInit} from "@angular/core"
 import { CommonModule } from "@angular/common"
-import { RouterModule } from "@angular/router"
+import {NavigationEnd, Router, RouterModule} from "@angular/router"
+import {filter} from 'rxjs';
 
 @Component({
   selector: "app-sidebar",
   standalone: true,
   imports: [CommonModule, RouterModule],
   template: `
-    <aside class="sidebar" [class.sidebar-collapsed]="collapsed">
+    <aside *ngIf="isVisible" class="sidebar" [class.sidebar-collapsed]="collapsed">
       <div class="sidebar-header">
         <div class="logo-container">
           <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="logo-icon">
             <path d="M2 12a5 5 0 0 0 5 5 8 8 0 0 1 5 2 8 8 0 0 1 5-2 5 5 0 0 0 5-5V7H2v5z"></path>
             <path d="M6 7V5c0-1.1.9-2 2-2h8a2 2 0 0 1 2 2v2"></path>
           </svg>
-          <span class="logo-text" *ngIf="!collapsed">Maritime</span>
+          <span class="logo-text" *ngIf="!collapsed">Teemo</span>
         </div>
         <button class="collapse-btn" (click)="toggleCollapse()">
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -256,26 +257,37 @@ import { RouterModule } from "@angular/router"
   `,
   ],
 })
-export class SidebarComponent {
+export class SidebarComponent implements OnInit {
   @Input() currentUser: any = {
     name: "Usuario Demo",
     role: "Capitán",
   }
 
   collapsed = false
+  isVisible = true // Controla la visibilidad del sidebar
 
-  toggleCollapse(): void {
-    this.collapsed = !this.collapsed
-    // Store preference in localStorage
-    localStorage.setItem("sidebar_collapsed", this.collapsed.toString())
-  }
+  constructor(private router: Router) {}
 
   ngOnInit(): void {
-    // Load preference from localStorage
+    // Cargar preferencia de colapso desde localStorage
     const savedState = localStorage.getItem("sidebar_collapsed")
     if (savedState) {
       this.collapsed = savedState === "true"
     }
+
+    // Detectar cambios de ruta
+    this.router.events
+      .pipe(filter((event) => event instanceof NavigationEnd))
+      .subscribe((event: NavigationEnd) => {
+        // Rutas donde el sidebar debe estar visible
+        const visibleRoutes = ["/shipment-reports", "/dashboard"]
+        this.isVisible = visibleRoutes.includes(event.urlAfterRedirects)
+      })
+  }
+
+  toggleCollapse(): void {
+    this.collapsed = !this.collapsed
+    localStorage.setItem("sidebar_collapsed", this.collapsed.toString())
   }
 
   getUserInitials(): string {

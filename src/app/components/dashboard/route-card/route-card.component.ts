@@ -1,13 +1,21 @@
 import { Component, Input, Output, EventEmitter } from "@angular/core"
 import { CommonModule } from "@angular/common"
-import type { Route } from "../../../services/route.service"
+
+interface Route {
+  id: number
+  name: string
+  status: string
+  vessels: number
+  distance: string
+  eta: string
+}
 
 @Component({
   selector: "app-route-card",
   standalone: true,
   imports: [CommonModule],
   template: `
-    <div class="route-card" [ngClass]="'status-' + route.status.toLowerCase()">
+    <div class="route-card hover-lift transition-all" [ngClass]="'status-' + route.status.toLowerCase()">
       <div class="route-header">
         <h3 class="route-name">{{ route.name }}</h3>
         <span class="status-badge" [ngClass]="'status-' + route.status.toLowerCase()">
@@ -56,7 +64,6 @@ import type { Route } from "../../../services/route.service"
   `,
   styles: [
     `
-
       .route-card {
         background-color: white;
         border-radius: 0.5rem;
@@ -212,6 +219,19 @@ import type { Route } from "../../../services/route.service"
           background-color: #084e88;
         }
       }
+
+      .hover-lift {
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+      }
+
+      .hover-lift:hover {
+        transform: translateY(-0.25rem);
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+      }
+
+      .transition-all {
+        transition: all 0.3s ease;
+      }
     `,
   ],
 })
@@ -228,3 +248,6 @@ export class RouteCardComponent {
     this.track.emit(this.route.id)
   }
 }
+
+// Make sure to export the component
+export default RouteCardComponent
