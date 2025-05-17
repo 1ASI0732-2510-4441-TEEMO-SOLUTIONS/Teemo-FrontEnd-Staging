@@ -1,8 +1,9 @@
 import { Injectable } from "@angular/core"
-import { HttpClient, HttpErrorResponse } from "@angular/common/http"
+import  { HttpClient, HttpErrorResponse } from "@angular/common/http"
 import {  Observable, throwError } from "rxjs"
 import { catchError } from "rxjs/operators"
 import { environment } from "../../environments/environment"
+import { HttpParams } from "@angular/common/http"
 
 export interface RoutePort {
   id: number
@@ -42,6 +43,20 @@ export interface RoutePlanResult {
   status?: string
 }
 
+// Añadir estos nuevos tipos para manejar la respuesta del endpoint de cálculo de ruta
+export interface RouteCalculationResource {
+  optimalRoute: string[]
+  totalDistance: number
+  warnings: string[]
+  metadata: Record<string, any>
+}
+
+export interface RouteDistanceResource {
+  distance: number
+  messages: string[]
+  metadata: Record<string, any>
+}
+
 @Injectable({
   providedIn: "root",
 })
@@ -68,6 +83,24 @@ export class RouteService {
   // Get route by ID (assuming you'll add this endpoint)
   getRouteById(routeId: number): Observable<Route> {
     return this.http.get<Route>(`${this.apiUrl}/${routeId}`).pipe(catchError(this.handleError))
+  }
+
+  // Método para calcular la ruta óptima entre dos puertos
+  calculateOptimalRoute(startPort: string, endPort: string): Observable<RouteCalculationResource> {
+    const params = new HttpParams().set("startPort", startPort).set("endPort", endPort)
+
+    return this.http
+      .post<RouteCalculationResource>(`${this.apiUrl}/calculate-optimal-route`, null, { params })
+      .pipe(catchError(this.handleError))
+  }
+
+  // Método para obtener la distancia entre dos puertos
+  getDistanceBetweenPorts(startPort: string, endPort: string): Observable<RouteDistanceResource> {
+    const params = new HttpParams().set("startPort", startPort).set("endPort", endPort)
+
+    return this.http
+      .get<RouteDistanceResource>(`${this.apiUrl}/distance-between-ports`, { params })
+      .pipe(catchError(this.handleError))
   }
 
   // Handle HTTP errors

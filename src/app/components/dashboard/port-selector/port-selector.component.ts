@@ -2,13 +2,17 @@ import { Component, type OnInit, Output, EventEmitter } from "@angular/core"
 import { CommonModule } from "@angular/common"
 import {  FormBuilder, type FormGroup, ReactiveFormsModule, Validators } from "@angular/forms"
 import  { PortService, Port } from "../../../services/port.service"
+// Añadir estos imports al inicio del archivo
+import { RouteAnimationComponent } from "../route-animation/route-animation.component"
+import  { RouteService, RouteCalculationResource } from "../../../services/route.service"
 
 @Component({
   selector: "app-port-selector",
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  // Añadir RouteAnimationComponent a los imports del componente
+  imports: [CommonModule, ReactiveFormsModule, RouteAnimationComponent],
   template: `
-    <div class="port-selector-container">
+    <div class="port-selector-container" *ngIf="!showRouteAnimation">
       <h3>Seleccionar Puertos para la Ruta</h3>
 
       <div *ngIf="loading" class="loading-indicator">
@@ -70,14 +74,42 @@ import  { PortService, Port } from "../../../services/port.service"
           </div>
         </div>
 
+        <div class="route-error" *ngIf="routeError">
+          <div class="error-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="8" x2="12" y2="12"></line>
+              <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+          </div>
+          <div class="error-message">{{ routeError }}</div>
+        </div>
+
         <div class="form-actions">
           <button type="button" class="btn-cancel" (click)="onCancel()">Cancelar</button>
-          <button type="submit" class="btn-primary" [disabled]="routeForm.invalid" (click)="onSubmit()">
-            Planificar Ruta
+          <button
+            type="submit"
+            class="btn-primary"
+            [disabled]="routeForm.invalid || isCalculatingRoute"
+            (click)="onSubmit()"
+          >
+            <div *ngIf="!isCalculatingRoute">Visualizar Ruta</div>
+            <div *ngIf="isCalculatingRoute" class="btn-loading">
+              <div class="btn-spinner"></div>
+              <span>Calculando...</span>
+            </div>
           </button>
         </div>
       </form>
     </div>
+
+    <app-route-animation
+      *ngIf="showRouteAnimation"
+      [startPortId]="selectedOriginPort?.id || ''"
+      [endPortId]="selectedDestinationPort?.id || ''"
+      [routeData]="calculatedRoute"
+      (close)="handleCloseAnimation()"
+    ></app-route-animation>
   `,
   styles: [
     `
@@ -240,6 +272,44 @@ import  { PortService, Port } from "../../../services/port.service"
       .continent-info {
         color: #fbbc05;
       }
+
+      .route-error {
+        display: flex;
+        padding: 0.75rem;
+        background-color: rgba(239, 68, 68, 0.1);
+        border-radius: 0.375rem;
+        margin-bottom: 1rem;
+        gap: 0.5rem;
+      }
+
+      .error-icon {
+        color: #ef4444;
+        flex-shrink: 0;
+      }
+
+      .error-message {
+        color: #ef4444;
+        font-size: 0.875rem;
+      }
+
+      .btn-loading {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      .btn-spinner {
+        width: 1rem;
+        height: 1rem;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        border-radius: 50%;
+        border-top-color: white;
+        animation: spin 1s linear infinite;
+      }
+
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
     `,
   ],
 })
@@ -255,9 +325,16 @@ export class PortSelectorComponent implements OnInit {
   selectedOriginPort: Port | null = null
   selectedDestinationPort: Port | null = null
 
+  // Añadir estas propiedades a la clase PortSelectorComponent
+  showRouteAnimation = false
+  calculatedRoute: RouteCalculationResource | null = null
+  isCalculatingRoute = false
+  routeError = ""
+
   constructor(
     private portService: PortService,
     private fb: FormBuilder,
+    private routeService: RouteService,
   ) {
     this.routeForm = this.fb.group({
       originPortId: ["", Validators.required],
@@ -307,18 +384,27 @@ export class PortSelectorComponent implements OnInit {
     this.cancel.emit()
   }
 
+  // Modificar el método onSubmit() para calcular la ruta
   onSubmit(): void {
     if (this.routeForm.valid && this.selectedOriginPort && this.selectedDestinationPort) {
-      const routeData = {
-        originPortId: this.selectedOriginPort.id,
-        originPortName: this.selectedOriginPort.name,
-        destinationPortId: this.selectedDestinationPort.id,
-        destinationPortName: this.selectedDestinationPort.name,
-        distance: this.calculateDistance(),
-        isCrossContinental: this.isCrossContinental(),
-      }
+      this.isCalculatingRoute = true
+      this.routeError = ""
 
-      this.submitRoute.emit(routeData)
+      // Llamar al servicio para calcular la ruta óptima
+      this.routeService
+        .calculateOptimalRoute(this.selectedOriginPort.name, this.selectedDestinationPort.name)
+        .subscribe({
+          next: (routeData: RouteCalculationResource) => {
+            this.calculatedRoute = routeData
+            this.showRouteAnimation = true
+            this.isCalculatingRoute = false
+          },
+          error: (err: Error) => {
+            console.error("Error al calcular la ruta:", err)
+            this.routeError = err.message || "No se pudo calcular la ruta. Por favor, inténtelo de nuevo."
+            this.isCalculatingRoute = false
+          },
+        })
     }
   }
 
@@ -360,5 +446,10 @@ export class PortSelectorComponent implements OnInit {
 
   private toRad(value: number): number {
     return (value * Math.PI) / 180
+  }
+
+  // Añadir este método para cerrar la animación
+  handleCloseAnimation(): void {
+    this.showRouteAnimation = false
   }
 }
