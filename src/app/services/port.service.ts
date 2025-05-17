@@ -19,7 +19,7 @@ export interface Port {
   providedIn: "root",
 })
 export class PortService {
-  private apiUrl = `${environment.apiUrl}/api/ports`
+  private apiUrl = `${environment.apiUrl}/ports`
 
   // Datos de respaldo en caso de que la API falle
   private fallbackPorts: Port[] = [

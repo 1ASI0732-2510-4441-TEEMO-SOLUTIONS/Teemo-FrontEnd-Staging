@@ -37,7 +37,7 @@ export interface SignUpRequest {
 })
 export class AuthService {
   // Cambiamos la URL para que coincida con el backend
-  private apiUrl = `${environment.apiUrl}/api/authentication`
+  private apiUrl = `${environment.apiUrl}/authentication`
   private tokenKey = "maritime_auth_token"
   private userKey = "maritime_user"
   private currentUserSubject: BehaviorSubject<User | null>
@@ -71,7 +71,7 @@ export class AuthService {
           id: response.id,
           username: response.username,
           name: response.username, // If the backend doesn't provide a name, use the username
-          role: "Usuario", // Assign a default role
+          role: "ROLE_USER", // Assign a default role
           token: response.token,
         }
 

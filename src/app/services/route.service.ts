@@ -60,32 +60,19 @@ export interface RouteDistanceResource {
 @Injectable({
   providedIn: "root",
 })
+
+
+
 export class RouteService {
-  private apiUrl = `${environment.apiUrl}/api/v1/routes`
+  private apiUrl = `${environment.apiUrl}/routes`
 
   constructor(private http: HttpClient) {}
 
-  // GET /api/v1/routes/find
-  findRoute(from: string, to: string): Observable<any[]> {
-    return this.http.get<any[]>(`${this.apiUrl}/find?from=${from}&to=${to}`).pipe(catchError(this.handleError))
-  }
-
-  // GET /api/v1/routes/ports
-  getRoutePorts(): Observable<RoutePort[]> {
-    return this.http.get<RoutePort[]>(`${this.apiUrl}/ports`).pipe(catchError(this.handleError))
-  }
-
-  // POST /api/v1/routes/plan
-  planRoute(routeData: CreateRouteRequest): Observable<RoutePlanResult> {
-    return this.http.post<RoutePlanResult>(`${this.apiUrl}/plan`, routeData).pipe(catchError(this.handleError))
-  }
-
   // Get route by ID (assuming you'll add this endpoint)
   getRouteById(routeId: number): Observable<Route> {
-    return this.http.get<Route>(`${this.apiUrl}/${routeId}`).pipe(catchError(this.handleError))
+    return this.http.get<Route>(`${this.apiUrl}/route/${routeId}`).pipe(catchError(this.handleError))
   }
 
-  // Método para calcular la ruta óptima entre dos puertos
   calculateOptimalRoute(startPort: string, endPort: string): Observable<RouteCalculationResource> {
     const params = new HttpParams().set("startPort", startPort).set("endPort", endPort)
 
@@ -94,7 +81,6 @@ export class RouteService {
       .pipe(catchError(this.handleError))
   }
 
-  // Método para obtener la distancia entre dos puertos
   getDistanceBetweenPorts(startPort: string, endPort: string): Observable<RouteDistanceResource> {
     const params = new HttpParams().set("startPort", startPort).set("endPort", endPort)
 
