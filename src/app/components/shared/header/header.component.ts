@@ -89,7 +89,7 @@ import { AuthService } from "../../../services/auth.service"
     `
 
     .header {
-      background-color: white;
+      background-color: #0a6cbc;
       box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
       height: 70px;
       display: flex;
@@ -122,7 +122,7 @@ import { AuthService } from "../../../services/auth.service"
     .page-title {
       font-size: 1.5rem;
       font-weight: 700;
-      color: #0f172a;
+      color: white;
       margin: 0;
     }
 
@@ -238,7 +238,7 @@ import { AuthService } from "../../../services/auth.service"
   ],
 })
 export class HeaderComponent {
-  @Input() pageTitle = "Dashboard"
+  @Input() pageTitle = "Teemo Solutions"
   @Input() breadcrumbs: { label: string; link?: string }[] = []
   @Input() notificationCount = 0
   @Input() sidebarCollapsed = false

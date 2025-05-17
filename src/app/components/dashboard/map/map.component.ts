@@ -1,14 +1,14 @@
 import { Component, type OnInit, type AfterViewInit, type ElementRef, ViewChild, type OnDestroy } from "@angular/core"
 import { CommonModule } from "@angular/common"
 import * as L from "leaflet"
-import { PortService, Port } from "../../../services/port.service"
+import  { PortService, Port } from "../../../services/port.service"
 
 @Component({
   selector: "app-map",
   standalone: true,
   imports: [CommonModule],
   template: `
-    <div class="map-container">
+    <div class="map-container scale-in">
       <div class="map-header">
         <h3>Mapa de Rutas Marítimas</h3>
         <div class="map-controls">

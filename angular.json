@@ -28,6 +28,7 @@
             ],
             "styles": [
               "src/styles.css",
+              "src/styles/animations.css",
               "node_modules/leaflet/dist/leaflet.css"
             ],
             "scripts": []
@@ -86,7 +87,8 @@
               }
             ],
             "styles": [
-              "src/styles.css"
+              "src/styles.css",
+              "src/styles/animations.css"
             ],
             "scripts": []
           }

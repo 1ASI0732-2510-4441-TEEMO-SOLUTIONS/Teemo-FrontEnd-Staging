@@ -1,4 +1,4 @@
-import { Component, type OnInit } from "@angular/core"
+import { Component, type OnInit, type AfterViewInit } from "@angular/core"
 import { CommonModule } from "@angular/common"
 import { RouterModule } from "@angular/router"
 import { MapComponent } from "./map/map.component"
@@ -6,6 +6,16 @@ import { RouteCardComponent } from "./route-card/route-card.component"
 import { PortSelectorComponent } from "./port-selector/port-selector.component"
 import { SidebarComponent } from "../shared/sidebar/sidebar.component"
 import { HeaderComponent } from "../shared/header/header.component"
+import { AnimationService } from "../../services/animation.service"
+
+interface Route {
+  id: number
+  name: string
+  status: string
+  vessels: number
+  distance: string
+  eta: string
+}
 
 @Component({
   selector: "app-dashboard",
@@ -301,13 +311,13 @@ import { HeaderComponent } from "../shared/header/header.component"
     `,
   ],
 })
-export class DashboardComponent implements OnInit {
+export class DashboardComponent implements OnInit, AfterViewInit {
   currentUser = {
     name: "Usuario Demo",
     role: "Capitán",
   }
 
-  routes = [
+  routes: Route[] = [
     {
       id: 1,
       name: "Singapore to Rotterdam",
@@ -346,7 +356,7 @@ export class DashboardComponent implements OnInit {
   errorMessage: string | null = null
   sidebarCollapsed = true
 
-  constructor() {}
+  constructor(private animationService: AnimationService) {}
 
   ngOnInit(): void {
     // Check if sidebar state is saved
@@ -354,6 +364,42 @@ export class DashboardComponent implements OnInit {
     if (savedState) {
       this.sidebarCollapsed = savedState === "true"
     }
+  }
+
+  ngAfterViewInit(): void {
+    // Add animations after the view is initialized
+    setTimeout(() => {
+      // Animate route cards with staggered effect
+      this.animationService.animateDashboardCards(".route-card")
+
+      // Add hover animations to cards
+      this.animationService.addHoverAnimation(".route-card")
+
+      // Animate statistics when they come into view
+      this.animationService.animateOnScroll(".stat-card")
+
+      // Animate progress bars
+      const progressBars = document.querySelectorAll(".progress-fill")
+      progressBars.forEach((element) => {
+        // Cast Element to HTMLElement
+        const bar = element as HTMLElement
+        const width = bar.style.width
+        bar.style.width = "0"
+        setTimeout(() => {
+          this.animationService.animateProgressBar(bar, width)
+        }, 300)
+      })
+
+      // Animate counters in statistics
+      const statValues = document.querySelectorAll(".stat-value")
+      statValues.forEach((element) => {
+        // Cast Element to HTMLElement
+        const el = element as HTMLElement
+        const value = Number.parseInt(el.textContent || "0", 10)
+        el.textContent = "0"
+        this.animationService.animateCounter(el, value)
+      })
+    }, 300)
   }
 
   togglePortSelector(): void {
