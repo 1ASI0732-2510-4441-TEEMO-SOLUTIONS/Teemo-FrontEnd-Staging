@@ -19,8 +19,8 @@ import { HeaderComponent } from "../../shared/header/header.component"
 
       <div class="main-content">
         <app-header
-          pageTitle="Puertos Cercanos"
-          [breadcrumbs]="[{label: 'Puertos Cercanos'}]"
+          pageTitle="Informacion de Puertos"
+          [breadcrumbs]="[{label: 'Informacion de Puertos'}]"
           [notificationCount]="1"
         >
           <button class="btn-primary">

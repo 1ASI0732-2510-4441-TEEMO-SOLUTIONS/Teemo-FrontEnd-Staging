@@ -5,25 +5,25 @@ import { Injectable } from "@angular/core"
 })
 export class AnimationService {
   constructor() {
-    // Load GSAP dynamically
+
     this.loadGSAP()
   }
 
   private loadGSAP(): void {
-    // Create script element for GSAP
+
     const gsapScript = document.createElement("script")
     gsapScript.src = "https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"
     gsapScript.async = true
     document.head.appendChild(gsapScript)
 
-    // Create script element for ScrollTrigger plugin
+
     const scrollTriggerScript = document.createElement("script")
     scrollTriggerScript.src = "https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"
     scrollTriggerScript.async = true
     document.head.appendChild(scrollTriggerScript)
   }
 
-  // Method to animate dashboard cards with staggered effect
+
   animateDashboardCards(selector: string): void {
     if (typeof window !== "undefined" && (window as any).gsap) {
       const gsap = (window as any).gsap

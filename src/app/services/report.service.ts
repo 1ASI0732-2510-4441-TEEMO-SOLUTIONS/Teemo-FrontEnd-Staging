@@ -50,7 +50,6 @@ export interface RouteHistoryItem {
 export class ReportService {
   private apiUrl = `${environment.apiUrl}/api/v1/reports`
 
-
   private mockShipmentReports: ShipmentReport[] = [
     {
       id: 1,
@@ -177,7 +176,6 @@ export class ReportService {
     },
   ]
 
-
   private mockRouteHistory: RouteHistoryItem[] = [
     {
       id: 1,
@@ -256,23 +254,18 @@ export class ReportService {
   constructor(private http: HttpClient) {}
 
   getShipmentReports(): Observable<ShipmentReport[]> {
-
     return of(this.mockShipmentReports).pipe(
       delay(800), // Simular latencia de red
     )
   }
 
   getShipmentReportById(id: number): Observable<ShipmentReport | undefined> {
-
     const report = this.mockShipmentReports.find((r) => r.id === id)
-    return of(report).pipe(
-      delay(500),
-    )
+    return of(report).pipe(delay(500))
   }
 
   getRouteHistory(filters?: any): Observable<RouteHistoryItem[]> {
     let filteredHistory = [...this.mockRouteHistory]
-
 
     if (filters) {
       if (filters.startDate && filters.endDate) {
@@ -315,6 +308,28 @@ export class ReportService {
       }),
       map(() => true),
     )
+  }
+
+  // Método para añadir un nuevo reporte
+  addReport(report: ShipmentReport): void {
+    // Añadir el reporte a la lista de reportes
+    this.mockShipmentReports.unshift(report)
+
+    // También añadir una entrada en el historial de rutas
+    const routeHistoryItem: RouteHistoryItem = {
+      id: report.id,
+      routeName: report.routeName,
+      originPort: report.routeName.split(" a ")[0],
+      destinationPort: report.routeName.split(" a ")[1],
+      departureDate: new Date(report.departureDate).toISOString().split("T")[0],
+      arrivalDate: new Date(report.arrivalDate).toISOString().split("T")[0],
+      vessel: report.vessel,
+      status: "Planificada",
+      distance: report.distance,
+      emissions: report.emissions.co2,
+    }
+
+    this.mockRouteHistory.unshift(routeHistoryItem)
   }
 
   private generatePdf(report: ShipmentReport): void {
