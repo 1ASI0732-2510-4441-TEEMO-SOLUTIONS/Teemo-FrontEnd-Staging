@@ -4,11 +4,11 @@ import { FormsModule } from "@angular/forms"
 import { PortService, Port } from "../../../services/port.service"
 import  { RouteService, RouteCalculationResource } from "../../../services/route.service"
 import { RouteAnimationComponent } from "../route-animation/route-animation.component"
-
+import { IncotermCalculatorComponent } from "../incoterm-calculator/incoterm-calculator.component"
 @Component({
   selector: "app-port-selector",
   standalone: true,
-  imports: [CommonModule, FormsModule, RouteAnimationComponent],
+  imports: [CommonModule, FormsModule, RouteAnimationComponent, IncotermCalculatorComponent],
   template: `
     <div class="port-selector-container">
       <div class="card-header">
@@ -31,6 +31,14 @@ import { RouteAnimationComponent } from "../route-animation/route-animation.comp
           Cancelar
         </button>
       </div>
+
+      <app-incoterm-calculator
+        *ngIf="showIncotermForm"
+        [originPort]="selectedOriginPort?.name ?? ''"
+        [destinationPort]="selectedDestinationPort?.name ?? ''"
+        [distance]="routeData?.totalDistance ?? 0"
+        (cancel)="showIncotermForm = false"
+      ></app-incoterm-calculator>
 
       <div class="port-selector-content">
         <!-- Selector de Puerto de Origen -->
@@ -462,9 +470,17 @@ import { RouteAnimationComponent } from "../route-animation/route-animation.comp
           </svg>
           Crear Ruta
         </button>
+        <button
+          class="btn-secondary"
+          (click)="showIncotermForm = true"
+          [disabled]="!routeData"
+        >
+          Calcular Incoterm
+        </button>
       </div>
     </div>
   `,
+
   styles: [
     `
     .port-selector-container {
@@ -882,6 +898,7 @@ import { RouteAnimationComponent } from "../route-animation/route-animation.comp
   ],
 })
 export class PortSelectorComponent implements OnInit {
+  showIncotermForm = false;
   @Output() cancel = new EventEmitter<void>()
 
   // Puertos
