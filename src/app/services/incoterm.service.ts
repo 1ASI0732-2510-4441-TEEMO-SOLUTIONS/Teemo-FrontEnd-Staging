@@ -60,7 +60,7 @@ export class IncotermService {
     // Simulamos un cálculo basado en los datos proporcionados
     const result = this.generateIncotermRecommendation(formData, originPort, destinationPort, distance)
 
-    // Simulamos un delay para imitar una llamada a API
+
     return of(result).pipe(delay(1500))
   }
 

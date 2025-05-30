@@ -32,14 +32,6 @@ import { IncotermCalculatorComponent } from "../incoterm-calculator/incoterm-cal
         </button>
       </div>
 
-      <app-incoterm-calculator
-        *ngIf="showIncotermForm"
-        [originPort]="selectedOriginPort?.name ?? ''"
-        [destinationPort]="selectedDestinationPort?.name ?? ''"
-        [distance]="routeData?.totalDistance ?? 0"
-        (cancel)="showIncotermForm = false"
-      ></app-incoterm-calculator>
-
       <div class="port-selector-content">
         <!-- Selector de Puerto de Origen -->
         <div class="port-selection-section">
@@ -478,6 +470,13 @@ import { IncotermCalculatorComponent } from "../incoterm-calculator/incoterm-cal
           Calcular Incoterm
         </button>
       </div>
+      <app-incoterm-calculator
+        *ngIf="showIncotermForm"
+        [originPort]="selectedOriginPort?.name ?? ''"
+        [destinationPort]="selectedDestinationPort?.name ?? ''"
+        [distance]="routeData?.totalDistance ?? 0"
+        (cancel)="showIncotermForm = false"
+      ></app-incoterm-calculator>
     </div>
   `,
 

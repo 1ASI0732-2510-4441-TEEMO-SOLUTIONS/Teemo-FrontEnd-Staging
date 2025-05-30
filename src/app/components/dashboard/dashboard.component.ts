@@ -37,7 +37,7 @@ interface Route {
 
       <div class="main-content">
         <app-header
-          pageTitle="Dashboard"
+          pageTitle="Mushroom"
           [notificationCount]="3"
         >
           <button class="btn-primary" (click)="togglePortSelector()">
@@ -192,7 +192,7 @@ interface Route {
         overflow: hidden;
         display: flex;
         flex-direction: column;
-        height: 500px; /* Increased height for better visibility */
+        height: 600px; /* Increased height for better visibility */
       }
 
       .routes-container {
