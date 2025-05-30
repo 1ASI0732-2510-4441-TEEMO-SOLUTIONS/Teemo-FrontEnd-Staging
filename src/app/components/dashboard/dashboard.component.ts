@@ -32,7 +32,61 @@ interface Route {
     RouteAnimationComponent,
   ],
   template: `
-    <div class="app-container">
+    <!-- Splash Screen -->
+    <div *ngIf="showSplash" class="splash-screen" [class.hidden]="splashHidden">
+      <div class="splash-content">
+        <div class="splash-logo">
+          <svg width="160" height="160" viewBox="0 0 140 140" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <!-- Tallo más ancho y menos alto -->
+            <rect x="57" y="75" width="28" height="30" rx="8" fill="#f8fafc"/>
+
+            <!-- Sombrero principal agrandado -->
+            <path d="M25 55C25 30 70 20 70 20C70 20 115 30 115 55C115 80 70 75 70 75C70 75 25 80 25 55Z" fill="#0a6cbc"/>
+
+            <!-- Parte inferior del sombrero -->
+            <ellipse cx="70" cy="60" rx="45" ry="18" fill="#084e88"/>
+
+            <!-- Ojos con animación de brillo estelar -->
+            <g class="starry-eyes">
+              <!-- Ojo izquierdo -->
+              <circle class="eye-base" cx="50" cy="50" r="10" fill="#f8fafc"/>
+              <!-- Destellos ojo izquierdo -->
+              <g class="eye-sparkles">
+                <circle class="sparkle" cx="55" cy="45" r="2" fill="#ffffff"/>
+                <circle class="sparkle" cx="48" cy="53" r="1.5" fill="#ffffff"/>
+                <circle class="sparkle" cx="52" cy="55" r="1" fill="#ffffff"/>
+                <circle class="sparkle" cx="45" cy="48" r="1.2" fill="#ffffff"/>
+              </g>
+
+              <!-- Ojo derecho -->
+              <circle class="eye-base" cx="90" cy="50" r="10" fill="#f8fafc"/>
+              <!-- Destellos ojo derecho -->
+              <g class="eye-sparkles">
+                <circle class="sparkle" cx="95" cy="45" r="2" fill="#ffffff"/>
+                <circle class="sparkle" cx="88" cy="53" r="1.5" fill="#ffffff"/>
+                <circle class="sparkle" cx="92" cy="55" r="1" fill="#ffffff"/>
+                <circle class="sparkle" cx="85" cy="48" r="1.2" fill="#ffffff"/>
+              </g>
+            </g>
+
+            <!-- Pupilas fijas -->
+            <circle cx="50" cy="50" r="4" fill="#0a6cbc"/>
+            <circle cx="90" cy="50" r="4" fill="#0a6cbc"/>
+
+            <!-- Sonrisa -->
+
+            <!-- Manchas más grandes -->
+            <circle cx="40" cy="40" r="8" fill="#f8fafc"/>
+            <circle cx="70" cy="35" r="5" fill="#f8fafc"/>
+            <circle cx="100" cy="40" r="7" fill="#f8fafc"/>
+            <circle cx="60" cy="30" r="4" fill="#f8fafc"/>
+          </svg>
+        </div>
+        <h1>MUSHROOM</h1>
+      </div>
+    </div>
+
+    <div *ngIf="!showSplash" class="app-container">
       <app-sidebar [currentUser]="currentUser"></app-sidebar>
 
       <div class="main-content">
@@ -118,6 +172,113 @@ interface Route {
   `,
   styles: [
     `
+      /* Splash screen styles */
+      .splash-screen {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: #0f172a;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+        opacity: 1;
+        transition: opacity 0.8s ease, transform 1.2s ease;
+      }
+
+      .splash-screen.hidden {
+        opacity: 0;
+        transform: scale(1.2);
+        pointer-events: none;
+      }
+
+      .splash-content {
+        text-align: center;
+        color: white;
+      }
+
+      .splash-logo {
+        margin-bottom: 2rem;
+        animation: pulse 2s infinite ease-in-out;
+      }
+
+      .splash-content h1 {
+        font-size: 3rem;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        animation: fadeIn 1.5s ease;
+      }
+
+      /* Animación de brillo estelar */
+      .starry-eyes {
+        transform-origin: center;
+      }
+
+      .eye-base {
+        animation: pulse-glow 3s infinite ease-in-out;
+      }
+
+      .sparkle {
+        opacity: 0;
+        animation: twinkle 3s infinite;
+      }
+
+      .sparkle:nth-child(1) { animation-delay: 0.2s; }
+      .sparkle:nth-child(2) { animation-delay: 0.8s; }
+      .sparkle:nth-child(3) { animation-delay: 1.4s; }
+      .sparkle:nth-child(4) { animation-delay: 2.0s; }
+
+      @keyframes pulse-glow {
+        0%, 100% {
+          filter: drop-shadow(0 0 0px rgba(255, 255, 255, 0));
+        }
+        50% {
+          filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.8));
+        }
+      }
+
+      @keyframes twinkle {
+        0%, 100% {
+          opacity: 0;
+          transform: scale(0.1);
+        }
+        10%, 90% {
+          opacity: 1;
+          transform: scale(1);
+        }
+        50% {
+          opacity: 0.8;
+          transform: scale(1.5) rotate(15deg);
+        }
+      }
+
+      @keyframes star-pulse {
+        0%, 100% {
+          transform: scale(1);
+          filter: brightness(1);
+        }
+        50% {
+          transform: scale(1.05);
+          filter: brightness(1.5);
+        }
+      }
+
+      @keyframes sparkle-rotate {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+
+      .blinking-eyes {
+        animation: blink 5s infinite;
+        transform-origin: center;
+      }
+
       .app-container {
         display: flex;
         min-height: 100vh;
@@ -192,7 +353,7 @@ interface Route {
         overflow: hidden;
         display: flex;
         flex-direction: column;
-        height: 600px; /* Increased height for better visibility */
+        height: 500px; /* Increased height for better visibility */
       }
 
       .routes-container {
@@ -357,20 +518,53 @@ export class DashboardComponent implements OnInit, AfterViewInit {
   showPortSelector = false
   errorMessage: string | null = null
   sidebarCollapsed = true
+  showSplash = true
+  splashHidden = false
 
   constructor(private animationService: AnimationService) {}
 
   ngOnInit(): void {
     // Check if sidebar state is saved
-    const savedState = localStorage.getItem("sidebar_collapsed")
+    const savedState = localStorage.getItem("sidebar_collapsed");
     if (savedState) {
-      this.sidebarCollapsed = savedState === "true"
+      this.sidebarCollapsed = savedState === "true";
+    }
+
+    // Verificar si el splash ya se mostró en esta sesión
+    const splashAlreadyShown = sessionStorage.getItem('splashShown');
+
+    if (splashAlreadyShown) {
+      this.showSplash = false;
+      this.splashHidden = true;
+    } else {
+      sessionStorage.setItem('splashShown', 'true');
+
+      // Splash screen timing
+      setTimeout(() => {
+        this.splashHidden = true;
+        setTimeout(() => {
+          this.showSplash = false;
+        }, 800);
+      }, 3000);
     }
   }
 
-  ngAfterViewInit(): void {
-    // Add animations after the view is initialized
+
+  handleSplashScreen(): void {
+    // Splash screen timing
     setTimeout(() => {
+      this.splashHidden = true;
+      setTimeout(() => {
+        this.showSplash = false;
+      }, 800);
+    }, 3000);
+  }
+
+  ngAfterViewInit(): void {
+    // Iniciar animaciones solo después del splash screen
+    setTimeout(() => {
+      if (this.showSplash) return; // Si aún está mostrando el splash, no ejecutar
+
       // Animate route cards with staggered effect
       this.animationService.animateDashboardCards(".route-card")
 
@@ -401,7 +595,7 @@ export class DashboardComponent implements OnInit, AfterViewInit {
         el.textContent = "0"
         this.animationService.animateCounter(el, value)
       })
-    }, 300)
+    }, 3500) // 3000ms de splash + 500ms de margen
   }
 
   togglePortSelector(): void {
@@ -413,7 +607,6 @@ export class DashboardComponent implements OnInit, AfterViewInit {
   }
 
   logout(): void {
-    // Simplemente redirigir al dashboard
     window.location.href = "/dashboard"
   }
 }

@@ -61,7 +61,7 @@ import  { PortService, Port } from "../../../services/port.service"
     }
 
     .map-canvas {
-      height: 550px;
+      height: 400px;
       width: 100%;
     }
   `,
