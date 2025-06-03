@@ -2,8 +2,8 @@ import { Component, Input, type OnInit, type OnDestroy, type OnChanges, type Sim
 import { CommonModule } from "@angular/common"
 import { FormsModule } from "@angular/forms"
 import * as L from "leaflet"
-import { PortService, Port } from "../../../services/port.service"
-import { RouteCalculationResource } from "../../../services/route.service"
+import  { PortService, Port } from "../../../services/port.service"
+import  { RouteCalculationResource } from "../../../services/route.service"
 
 interface PortCoordinates {
   latitude: number
@@ -13,6 +13,27 @@ interface PortCoordinates {
 interface RoutePort {
   name: string
   coordinates: PortCoordinates
+}
+
+// Interfaz para datos GeoJSON
+interface GeoJSONFeature {
+  type: "Feature"
+  geometry: {
+    type: "Polygon" | "MultiPolygon"
+    coordinates: number[][][] | number[][][][]
+  }
+  properties: any
+}
+
+interface GeoJSONData {
+  type: "FeatureCollection"
+  features: GeoJSONFeature[]
+}
+
+// Interfaz para representar un segmento de línea
+interface LineSegment {
+  start: { lat: number; lng: number }
+  end: { lat: number; lng: number }
 }
 
 @Component({
@@ -96,6 +117,54 @@ interface RoutePort {
         </div>
       </div>
 
+      <!-- Estado de carga de GeoJSON -->
+      <div class="geojson-status" *ngIf="!geoJsonLoaded">
+        <div class="loading-indicator">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            class="animate-spin"
+          >
+            <path d="M21 12a9 9 0 11-6.219-8.56"></path>
+          </svg>
+          Cargando datos geográficos...
+        </div>
+      </div>
+
+      <!-- Información de detección de tierra -->
+      <div class="detection-info" *ngIf="geoJsonLoaded && lastDetectionInfo">
+        <div class="info-card">
+          <h4>Detección de Tierra</h4>
+          <div class="detection-grid">
+            <div class="detection-item">
+              <span class="label">Línea directa cruza tierra:</span>
+              <span class="value" [class.crosses]="lastDetectionInfo.directLineCrossesLand">
+                {{ lastDetectionInfo.directLineCrossesLand ? "SÍ" : "NO" }}
+              </span>
+            </div>
+            <div class="detection-item">
+              <span class="label">Puntos de prueba:</span>
+              <span class="value">{{ lastDetectionInfo.testPoints }}</span>
+            </div>
+            <div class="detection-item">
+              <span class="label">Intersecciones detectadas:</span>
+              <span class="value">{{ lastDetectionInfo.intersections }}</span>
+            </div>
+            <div class="detection-item">
+              <span class="label">Dirección de curvatura:</span>
+              <span class="value">{{ lastDetectionInfo.curveDirection > 0 ? "ESTE" : lastDetectionInfo.curveDirection < 0 ? "OESTE" : "RECTA" }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Información de la Ruta -->
       <div class="route-info" *ngIf="routeData">
         <div class="info-card">
@@ -116,6 +185,10 @@ interface RoutePort {
             <div class="info-item" *ngIf="currentPortIndex >= 0 && routePorts[currentPortIndex + 1]">
               <span class="label">Próximo Puerto:</span>
               <span class="value">{{ routePorts[currentPortIndex + 1].name }}</span>
+            </div>
+            <div class="info-item" *ngIf="geoJsonLoaded">
+              <span class="label">Detección de Tierra:</span>
+              <span class="value">✓ Activa ({{ geoJsonFeatureCount }} características)</span>
             </div>
           </div>
         </div>
@@ -306,6 +379,67 @@ interface RoutePort {
         text-align: center;
       }
 
+      .geojson-status {
+        padding: 0.75rem;
+        background-color: #fef3c7;
+        border: 1px solid #f59e0b;
+        border-radius: 0.375rem;
+        color: #92400e;
+      }
+
+      .loading-indicator {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.875rem;
+        font-weight: 500;
+      }
+
+      .animate-spin {
+        animation: spin 1s linear infinite;
+      }
+
+      @keyframes spin {
+        from {
+          transform: rotate(0deg);
+        }
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      .detection-info {
+        margin-bottom: 1rem;
+      }
+
+      .detection-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 0.75rem;
+      }
+
+      .detection-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+
+        .label {
+          font-size: 0.875rem;
+          color: #64748b;
+          font-weight: 500;
+        }
+
+        .value {
+          font-size: 0.875rem;
+          color: #0f172a;
+          font-weight: 600;
+
+          &.crosses {
+            color: #dc2626;
+          }
+        }
+      }
+
       .route-info {
         margin-bottom: 1rem;
       }
@@ -483,6 +617,10 @@ interface RoutePort {
           grid-template-columns: 1fr;
         }
 
+        .detection-grid {
+          grid-template-columns: 1fr;
+        }
+
         .ports-grid {
           grid-template-columns: 1fr;
         }
@@ -512,6 +650,19 @@ export class RouteAnimationComponent implements OnInit, OnDestroy, OnChanges {
   // Datos de la ruta
   routePoints: L.LatLng[] = []
   routePorts: RoutePort[] = []
+
+  // Datos GeoJSON para detección de tierra
+  private geoJsonData: GeoJSONData | null = null
+  geoJsonLoaded = false
+  geoJsonFeatureCount = 0
+
+  // Información de detección para debugging
+  lastDetectionInfo: {
+    directLineCrossesLand: boolean
+    testPoints: number
+    intersections: number
+    curveDirection: number
+  } | null = null
 
   // Iconos personalizados
   private shipIcon = L.divIcon({
@@ -545,6 +696,7 @@ export class RouteAnimationComponent implements OnInit, OnDestroy, OnChanges {
 
   ngOnInit(): void {
     this.initializeMap()
+    this.loadGeoJSON()
   }
 
   ngOnDestroy(): void {
@@ -558,6 +710,85 @@ export class RouteAnimationComponent implements OnInit, OnDestroy, OnChanges {
     if (changes["routeData"] && this.routeData) {
       console.log("RouteData recibida:", this.routeData)
       this.processRouteData()
+    }
+  }
+
+  toggleAnimation(): void {
+    if (this.isAnimating) {
+      this.stopAnimation()
+    } else {
+      this.startAnimation()
+    }
+  }
+
+  resetAnimation(): void {
+    this.stopAnimation()
+    this.currentPointIndex = 0
+    this.currentPortIndex = 0
+
+    if (this.shipMarker && this.routePoints.length > 0) {
+      this.shipMarker.setLatLng(this.routePoints[0])
+    }
+
+    if (this.traveledPolyline) {
+      this.traveledPolyline.setLatLngs([])
+    }
+  }
+
+  updateAnimationSpeed(): void {
+    if (this.isAnimating) {
+      this.stopAnimation()
+      this.startAnimation()
+    }
+  }
+
+  private async loadGeoJSON(): Promise<void> {
+    try {
+      console.log("Cargando datos GeoJSON locales...")
+
+      // Usar el archivo GeoJSON local del proyecto
+      const response = await fetch("/assets/data/land-polygons.geojson")
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      this.geoJsonData = await response.json()
+      this.geoJsonLoaded = true
+      this.geoJsonFeatureCount = this.geoJsonData?.features?.length || 0
+      console.log("GeoJSON local cargado exitosamente:", this.geoJsonFeatureCount, "características")
+
+      // Si ya tenemos datos de ruta, reprocesarlos con la nueva información geográfica
+      if (this.routeData) {
+        this.processRouteData()
+      }
+    } catch (error) {
+      console.error("Error cargando GeoJSON local:", error)
+      console.log("Intentando cargar GeoJSON de respaldo...")
+
+      // Fallback al GeoJSON externo si el local falla
+      try {
+        const response = await fetch(
+          "https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson",
+        )
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`)
+        }
+
+        this.geoJsonData = await response.json()
+        this.geoJsonLoaded = true
+        this.geoJsonFeatureCount = this.geoJsonData?.features?.length || 0
+        console.log("GeoJSON de respaldo cargado:", this.geoJsonFeatureCount, "características")
+
+        if (this.routeData) {
+          this.processRouteData()
+        }
+      } catch (fallbackError) {
+        console.error("Error cargando GeoJSON de respaldo:", fallbackError)
+        console.log("Continuando sin detección precisa de tierra...")
+        this.geoJsonLoaded = false
+      }
     }
   }
 
@@ -671,35 +902,361 @@ export class RouteAnimationComponent implements OnInit, OnDestroy, OnChanges {
 
     this.routePoints = []
 
-    // Crear puntos suaves entre cada par de puertos consecutivos
+    // Crear curvas inteligentes entre cada par de puertos consecutivos
     for (let i = 0; i < this.routePorts.length - 1; i++) {
       const currentPort = this.routePorts[i]
       const nextPort = this.routePorts[i + 1]
 
-      // Añadir el puerto actual
-      this.routePoints.push(L.latLng(currentPort.coordinates.latitude, currentPort.coordinates.longitude))
+      console.log(`\n=== Creando ruta entre ${currentPort.name} y ${nextPort.name} ===`)
 
-      // Añadir puntos intermedios para suavizar la ruta
-      const steps = 10 // Número de puntos intermedios entre puertos
-      for (let step = 1; step < steps; step++) {
-        const ratio = step / steps
-        const lat =
-          currentPort.coordinates.latitude + (nextPort.coordinates.latitude - currentPort.coordinates.latitude) * ratio
-        const lng =
-          currentPort.coordinates.longitude +
-          (nextPort.coordinates.longitude - currentPort.coordinates.longitude) * ratio
-        this.routePoints.push(L.latLng(lat, lng))
+      // Crear curva inteligente evitando tierra
+      const curvePoints = this.createIntelligentMaritimeCurve(currentPort.coordinates, nextPort.coordinates, 50)
+
+      // Añadir los puntos de la curva
+      if (i === 0) {
+        this.routePoints.push(...curvePoints)
+      } else {
+        this.routePoints.push(...curvePoints.slice(1))
       }
     }
 
-    // Añadir el último puerto
-    const lastPort = this.routePorts[this.routePorts.length - 1]
-    this.routePoints.push(L.latLng(lastPort.coordinates.latitude, lastPort.coordinates.longitude))
-
-    console.log(`Ruta creada con ${this.routePoints.length} puntos`)
-
-    // Dibujar la ruta en el mapa
+    console.log(`\nRuta marítima inteligente creada con ${this.routePoints.length} puntos`)
     this.drawRoute()
+  }
+
+  private createIntelligentMaritimeCurve(start: PortCoordinates, end: PortCoordinates, numPoints: number): L.LatLng[] {
+    console.log(
+      `Creando curva inteligente de [${start.latitude}, ${start.longitude}] a [${end.latitude}, ${end.longitude}]`,
+    )
+
+    // Primero, verificar si la línea directa cruza tierra con alta precisión
+    const directLineCrossesLand = this.doesLineIntersectLandPrecise(start, end)
+
+    // Información para debugging
+    this.lastDetectionInfo = {
+      directLineCrossesLand,
+      testPoints: 100, // Usamos 100 puntos para la detección precisa
+      intersections: 0,
+      curveDirection: 0,
+    }
+
+    if (!directLineCrossesLand) {
+      console.log("✓ Línea directa no cruza tierra, usando ruta recta")
+      this.lastDetectionInfo.curveDirection = 0
+      return this.createStraightLine(start, end, numPoints)
+    }
+
+    console.log("⚠ Línea directa cruza tierra, buscando ruta alternativa...")
+
+    // Buscar la mejor curvatura usando múltiples intentos
+    const bestCurve = this.findBestCurveDirection(start, end, numPoints)
+    this.lastDetectionInfo.curveDirection = bestCurve.direction
+    this.lastDetectionInfo.intersections = bestCurve.intersections
+
+    console.log(
+      `✓ Mejor curvatura encontrada: ${bestCurve.direction > 0 ? "ESTE" : "OESTE"} (${bestCurve.intersections} intersecciones)`,
+    )
+
+    return bestCurve.points
+  }
+
+  private doesLineIntersectLandPrecise(start: PortCoordinates, end: PortCoordinates): boolean {
+    if (!this.geoJsonData) return false
+
+    // Usar muchos más puntos para una detección más precisa
+    const numTestPoints = 100
+    const deltaLat = (end.latitude - start.latitude) / numTestPoints
+    const deltaLng = (end.longitude - start.longitude) / numTestPoints
+
+    // Verificar cada segmento pequeño de la línea
+    for (let i = 0; i < numTestPoints; i++) {
+      const lat1 = start.latitude + i * deltaLat
+      const lng1 = start.longitude + i * deltaLng
+      const lat2 = start.latitude + (i + 1) * deltaLat
+      const lng2 = start.longitude + (i + 1) * deltaLng
+
+      // Verificar si este segmento intersecta con tierra
+      if (this.doesSegmentIntersectLand({ lat: lat1, lng: lng1 }, { lat: lat2, lng: lng2 })) {
+        return true
+      }
+    }
+
+    return false
+  }
+
+  private doesSegmentIntersectLand(
+    point1: { lat: number; lng: number },
+    point2: { lat: number; lng: number },
+  ): boolean {
+    if (!this.geoJsonData) return false
+
+    // Verificar si alguno de los puntos está en tierra
+    if (this.isPointOnLand(point1.lat, point1.lng) || this.isPointOnLand(point2.lat, point2.lng)) {
+      return true
+    }
+
+    // Verificar intersección de línea con polígonos de tierra
+    const lineSegment: LineSegment = {
+      start: point1,
+      end: point2,
+    }
+
+    for (const feature of this.geoJsonData.features) {
+      if (this.doesLineIntersectFeature(lineSegment, feature)) {
+        return true
+      }
+    }
+
+    return false
+  }
+
+  private doesLineIntersectFeature(line: LineSegment, feature: GeoJSONFeature): boolean {
+    if (feature.geometry.type === "Polygon") {
+      const coordinates = feature.geometry.coordinates as number[][][]
+      return coordinates.some((ring) => this.doesLineIntersectPolygon(line, ring))
+    } else if (feature.geometry.type === "MultiPolygon") {
+      const coordinates = feature.geometry.coordinates as number[][][][]
+      return coordinates.some((polygon) => polygon.some((ring) => this.doesLineIntersectPolygon(line, ring)))
+    }
+    return false
+  }
+
+  private doesLineIntersectPolygon(line: LineSegment, polygon: number[][]): boolean {
+    // Verificar intersección con cada borde del polígono
+    for (let i = 0; i < polygon.length - 1; i++) {
+      const edge = {
+        start: { lat: polygon[i][1], lng: polygon[i][0] },
+        end: { lat: polygon[i + 1][1], lng: polygon[i + 1][0] },
+      }
+
+      if (this.doLinesIntersect(line, edge)) {
+        return true
+      }
+    }
+    return false
+  }
+
+  private doLinesIntersect(line1: LineSegment, line2: LineSegment): boolean {
+    // Algoritmo de intersección de líneas usando determinantes
+    const x1 = line1.start.lng,
+      y1 = line1.start.lat
+    const x2 = line1.end.lng,
+      y2 = line1.end.lat
+    const x3 = line2.start.lng,
+      y3 = line2.start.lat
+    const x4 = line2.end.lng,
+      y4 = line2.end.lat
+
+    const denom = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4)
+
+    if (Math.abs(denom) < 1e-10) {
+      return false // Líneas paralelas
+    }
+
+    const t = ((x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4)) / denom
+    const u = -((x1 - x2) * (y1 - y3) - (y1 - y2) * (x1 - x3)) / denom
+
+    return t >= 0 && t <= 1 && u >= 0 && u <= 1
+  }
+
+  private findBestCurveDirection(
+    start: PortCoordinates,
+    end: PortCoordinates,
+    numPoints: number,
+  ): {
+    direction: number
+    points: L.LatLng[]
+    intersections: number
+  } {
+    const testDirections = [-2, -1.5, -1, -0.5, 0.5, 1, 1.5, 2] // Múltiples direcciones y intensidades
+    let bestOption = {
+      direction: 1,
+      points: this.createStraightLine(start, end, numPoints),
+      intersections: Number.MAX_SAFE_INTEGER,
+    }
+
+    for (const direction of testDirections) {
+      const curvePoints = this.createCurveWithDirection(start, end, direction, numPoints)
+      const intersections = this.countCurveIntersections(curvePoints)
+
+      console.log(`Probando dirección ${direction}: ${intersections} intersecciones`)
+
+      if (intersections < bestOption.intersections) {
+        bestOption = {
+          direction,
+          points: curvePoints,
+          intersections,
+        }
+      }
+
+      // Si encontramos una ruta sin intersecciones, la usamos
+      if (intersections === 0) {
+        console.log(`✓ Ruta sin intersecciones encontrada con dirección ${direction}`)
+        break
+      }
+    }
+
+    return bestOption
+  }
+
+  private createCurveWithDirection(
+    start: PortCoordinates,
+    end: PortCoordinates,
+    direction: number,
+    numPoints: number,
+  ): L.LatLng[] {
+    const points: L.LatLng[] = []
+    const deltaLat = end.latitude - start.latitude
+    const deltaLng = end.longitude - start.longitude
+    const distance = Math.sqrt(deltaLat * deltaLat + deltaLng * deltaLng)
+
+    // Calcular curvatura adaptativa basada en la distancia
+    const baseCurvature = Math.min(distance * 0.3, 30)
+    const curvature = baseCurvature * Math.abs(direction)
+
+    // Punto medio
+    const midLat = (start.latitude + end.latitude) / 2
+    const midLng = (start.longitude + end.longitude) / 2
+
+    // Calcular punto de control perpendicular
+    const perpLat = (-deltaLng / distance) * curvature * Math.sign(direction)
+    const perpLng = (deltaLat / distance) * curvature * Math.sign(direction)
+
+    const controlLat = midLat + perpLat
+    const controlLng = midLng + perpLng
+
+    // Generar puntos de la curva de Bézier cuadrática
+    for (let i = 0; i <= numPoints; i++) {
+      const t = i / numPoints
+      const lat = Math.pow(1 - t, 2) * start.latitude + 2 * (1 - t) * t * controlLat + Math.pow(t, 2) * end.latitude
+      const lng = Math.pow(1 - t, 2) * start.longitude + 2 * (1 - t) * t * controlLng + Math.pow(t, 2) * end.longitude
+      points.push(L.latLng(lat, lng))
+    }
+
+    return points
+  }
+
+  private countCurveIntersections(points: L.LatLng[]): number {
+    if (!this.geoJsonData) return 0
+
+    let intersections = 0
+
+    // Verificar cada segmento de la curva
+    for (let i = 0; i < points.length - 1; i++) {
+      const point1 = { lat: points[i].lat, lng: points[i].lng }
+      const point2 = { lat: points[i + 1].lat, lng: points[i + 1].lng }
+
+      if (this.doesSegmentIntersectLand(point1, point2)) {
+        intersections++
+      }
+    }
+
+    return intersections
+  }
+
+  private createStraightLine(start: PortCoordinates, end: PortCoordinates, numPoints: number): L.LatLng[] {
+    const points: L.LatLng[] = []
+    const deltaLat = end.latitude - start.latitude
+    const deltaLng = end.longitude - start.longitude
+
+    for (let i = 0; i <= numPoints; i++) {
+      const t = i / numPoints
+      const lat = start.latitude + t * deltaLat
+      const lng = start.longitude + t * deltaLng
+      points.push(L.latLng(lat, lng))
+    }
+
+    return points
+  }
+
+  private isPointOnLand(lat: number, lng: number): boolean {
+    if (!this.geoJsonData) return false
+
+    // Verificar si el punto está dentro de algún polígono de tierra
+    for (const feature of this.geoJsonData.features) {
+      if (feature.geometry.type === "Polygon") {
+        const coordinates = feature.geometry.coordinates as number[][][]
+        if (coordinates.length > 0 && this.isPointInPolygon(lat, lng, coordinates[0])) {
+          return true
+        }
+      } else if (feature.geometry.type === "MultiPolygon") {
+        const coordinates = feature.geometry.coordinates as number[][][][]
+        for (const polygon of coordinates) {
+          if (polygon.length > 0 && this.isPointInPolygon(lat, lng, polygon[0])) {
+            return true
+          }
+        }
+      }
+    }
+    return false
+  }
+
+  private isPointInPolygon(lat: number, lng: number, polygon: number[][]): boolean {
+    // Algoritmo de ray casting mejorado
+    let inside = false
+    const x = lng
+    const y = lat
+
+    for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+      const xi = polygon[i][0]
+      const yi = polygon[i][1]
+      const xj = polygon[j][0]
+      const yj = polygon[j][1]
+
+      if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) {
+        inside = !inside
+      }
+    }
+
+    return inside
+  }
+
+  private createSimulatedRoute(): void {
+    // Crear una ruta simulada simple si no hay datos reales
+    console.log("Creando ruta simulada")
+
+    this.routePorts = [
+      { name: this.originPortName || "Puerto Origen", coordinates: { latitude: 35.6895, longitude: 139.6917 } },
+      { name: "Puerto Intermedio 1", coordinates: { latitude: 1.3521, longitude: 103.8198 } },
+      { name: this.destinationPortName || "Puerto Destino", coordinates: { latitude: -33.0472, longitude: -71.6128 } },
+    ]
+
+    this.loadPortsAndDrawRoute()
+  }
+
+  private clearMap(): void {
+    if (!this.map) return
+
+    // Limpiar marcadores de puertos
+    this.portMarkers.forEach((marker) => {
+      this.map!.removeLayer(marker)
+    })
+    this.portMarkers = []
+
+    // Limpiar rutas
+    if (this.routePolyline) {
+      this.map.removeLayer(this.routePolyline)
+      this.routePolyline = null
+    }
+    if (this.traveledPolyline) {
+      this.map.removeLayer(this.traveledPolyline)
+      this.traveledPolyline = null
+    }
+
+    // Limpiar marcador del barco
+    if (this.shipMarker) {
+      this.map.removeLayer(this.shipMarker)
+      this.shipMarker = null
+    }
+  }
+
+  private fitMapToBounds(): void {
+    if (!this.map || this.routePoints.length === 0) {
+      return
+    }
+
+    const group = new L.FeatureGroup(this.portMarkers)
+    this.map.fitBounds(group.getBounds().pad(0.1))
   }
 
   private addPortMarkerFromCoordinates(
@@ -734,24 +1291,24 @@ export class RouteAnimationComponent implements OnInit, OnDestroy, OnChanges {
 
       const portIcon = L.divIcon({
         html: `
-          <div style="
-            width: ${iconSize}px;
-            height: ${iconSize}px;
-            background-color: ${iconColor};
-            border: 3px solid white;
-            border-radius: 50%;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-          ">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="white">
-              <path d="M20 16.2A4.5 4.5 0 0 0 17.5 8h-1.8A7 7 0 1 0 4 14.9"></path>
-              <path d="M12 12v9"></path>
-              <path d="M8 17h8"></path>
-            </svg>
-          </div>
-        `,
+        <div style="
+          width: ${iconSize}px;
+          height: ${iconSize}px;
+          background-color: ${iconColor};
+          border: 3px solid white;
+          border-radius: 50%;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        ">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="white">
+            <path d="M20 16.2A4.5 4.5 0 0 0 17.5 8h-1.8A7 7 0 1 0 4 14.9"></path>
+            <path d="M12 12v9"></path>
+            <path d="M8 17h8"></path>
+          </svg>
+        </div>
+      `,
         className: `port-marker port-${type}`,
         iconSize: [iconSize, iconSize],
         iconAnchor: [iconSize / 2, iconSize / 2],
@@ -760,31 +1317,18 @@ export class RouteAnimationComponent implements OnInit, OnDestroy, OnChanges {
       const marker = L.marker([coordinates.latitude, coordinates.longitude], { icon: portIcon })
         .addTo(this.map)
         .bindPopup(`
-          <div style="text-align: center;">
-            <strong>${portName}</strong><br>
-            <small>Tipo: ${type === "origin" ? "Origen" : type === "destination" ? "Destino" : "Puerto de Ruta"}</small><br>
-            <small>${coordinates.latitude.toFixed(4)}°, ${coordinates.longitude.toFixed(4)}°</small>
-          </div>
-        `)
+        <div style="text-align: center;">
+          <strong>${portName}</strong><br>
+          <small>Tipo: ${type === "origin" ? "Origen" : type === "destination" ? "Destino" : "Puerto de Ruta"}</small><br>
+          <small>${coordinates.latitude.toFixed(4)}°, ${coordinates.longitude.toFixed(4)}°</small>
+        </div>
+      `)
 
       this.portMarkers.push(marker)
       console.log(`Marcador añadido para ${portName} (${type}) en:`, coordinates)
     } catch (error) {
       console.error(`Error al crear marcador para ${portName}:`, error)
     }
-  }
-
-  private createSimulatedRoute(): void {
-    // Crear una ruta simulada simple si no hay datos reales
-    console.log("Creando ruta simulada")
-
-    this.routePorts = [
-      { name: this.originPortName || "Puerto Origen", coordinates: { latitude: 35.6895, longitude: 139.6917 } },
-      { name: "Puerto Intermedio 1", coordinates: { latitude: 1.3521, longitude: 103.8198 } },
-      { name: this.destinationPortName || "Puerto Destino", coordinates: { latitude: -33.0472, longitude: -71.6128 } },
-    ]
-
-    this.loadPortsAndDrawRoute()
   }
 
   private drawRoute(): void {
@@ -815,51 +1359,8 @@ export class RouteAnimationComponent implements OnInit, OnDestroy, OnChanges {
     }).addTo(this.map)
   }
 
-  private fitMapToBounds(): void {
-    if (!this.map || this.routePoints.length === 0) {
-      return
-    }
-
-    const group = new L.FeatureGroup(this.portMarkers)
-    this.map.fitBounds(group.getBounds().pad(0.1))
-  }
-
-  private clearMap(): void {
-    if (!this.map) return
-
-    // Limpiar marcadores de puertos
-    this.portMarkers.forEach((marker) => {
-      this.map!.removeLayer(marker)
-    })
-    this.portMarkers = []
-
-    // Limpiar rutas
-    if (this.routePolyline) {
-      this.map.removeLayer(this.routePolyline)
-      this.routePolyline = null
-    }
-    if (this.traveledPolyline) {
-      this.map.removeLayer(this.traveledPolyline)
-      this.traveledPolyline = null
-    }
-
-    // Limpiar marcador del barco
-    if (this.shipMarker) {
-      this.map.removeLayer(this.shipMarker)
-      this.shipMarker = null
-    }
-  }
-
-  toggleAnimation(): void {
-    if (this.isAnimating) {
-      this.stopAnimation()
-    } else {
-      this.startAnimation()
-    }
-  }
-
   private startAnimation(): void {
-    if (this.routePoints.length === 0) {
+    if (!this.routePoints || this.routePoints.length === 0) {
       console.log("No hay puntos de ruta para animar")
       return
     }
@@ -877,14 +1378,6 @@ export class RouteAnimationComponent implements OnInit, OnDestroy, OnChanges {
     this.animationInterval = setInterval(() => {
       this.animateStep()
     }, 100 / this.animationSpeed)
-  }
-
-  private stopAnimation(): void {
-    this.isAnimating = false
-    if (this.animationInterval) {
-      clearInterval(this.animationInterval)
-      this.animationInterval = null
-    }
   }
 
   private animateStep(): void {
@@ -928,26 +1421,11 @@ export class RouteAnimationComponent implements OnInit, OnDestroy, OnChanges {
     this.currentPortIndex = closestPortIndex
   }
 
-  resetAnimation(): void {
-    this.stopAnimation()
-    this.currentPointIndex = 0
-    this.currentPortIndex = 0
-
-    // Resetear el marcador del barco
-    if (this.shipMarker && this.routePoints.length > 0) {
-      this.shipMarker.setLatLng(this.routePoints[0])
-    }
-
-    // Resetear la línea recorrida
-    if (this.traveledPolyline) {
-      this.traveledPolyline.setLatLngs([])
-    }
-  }
-
-  updateAnimationSpeed(): void {
-    if (this.isAnimating) {
-      this.stopAnimation()
-      this.startAnimation()
+  private stopAnimation(): void {
+    this.isAnimating = false
+    if (this.animationInterval) {
+      clearInterval(this.animationInterval)
+      this.animationInterval = null
     }
   }
 }
