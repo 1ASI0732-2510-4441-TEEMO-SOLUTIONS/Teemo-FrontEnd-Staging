@@ -17,7 +17,6 @@ import { ReportService, ShipmentReport } from "../../../services/report.service"
       <div class="main-content">
         <app-header
           pageTitle="Informes de Envíos"
-          [breadcrumbs]="[{label: 'Informes de Envíos'}]"
           [notificationCount]="2"
         >
           <button class="btn-primary">

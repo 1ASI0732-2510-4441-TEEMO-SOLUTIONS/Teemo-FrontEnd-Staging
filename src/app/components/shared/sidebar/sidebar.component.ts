@@ -1,7 +1,7 @@
-import {Component, Input, OnInit} from "@angular/core"
+import { Component, Input, type OnInit } from "@angular/core"
 import { CommonModule } from "@angular/common"
-import {NavigationEnd, Router, RouterModule} from "@angular/router"
-import {filter} from 'rxjs';
+import { NavigationEnd, Router, RouterModule } from "@angular/router"
+import { filter } from "rxjs"
 
 @Component({
   selector: "app-sidebar",
@@ -101,160 +101,160 @@ import {filter} from 'rxjs';
   styles: [
     `
 
-    .sidebar {
-      display: flex;
-      flex-direction: column;
-      width: 260px;
-      height: 100vh;
-      background-color: white;
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-      transition: width 250ms ease;
-      position: fixed;
-      left: 0;
-      top: 0;
-      z-index: 100;
+      .sidebar {
+        display: flex;
+        flex-direction: column;
+        width: 260px;
+        height: 100vh;
+        background-color: white;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        transition: width 250ms ease;
+        position: fixed;
+        left: 0;
+        top: 0;
+        z-index: 100;
 
-      &.sidebar-collapsed {
-        width: 80px;
-      }
-    }
-
-    .sidebar-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 1rem;
-      border-bottom: 1px solid #e2e8f0;
-      height: 70px;
-    }
-
-    .logo-container {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-
-    .logo-icon {
-      color: #0a6cbc;
-    }
-
-    .logo-text {
-      font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-      font-weight: 700;
-      font-size: 1.25rem;
-      color: #0f172a;
-    }
-
-    .collapse-btn {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 32px;
-      height: 32px;
-      border-radius: 9999px;
-      background-color: #f1f5f9;
-      color: #475569;
-      border: none;
-      cursor: pointer;
-      transition: all 150ms ease;
-
-      &:hover {
-        background-color: #e2e8f0;
-        color: #0f172a;
-      }
-    }
-
-    .sidebar-content {
-      flex: 1;
-      overflow-y: auto;
-      padding: 1rem 0;
-    }
-
-    .sidebar-nav {
-      display: flex;
-      flex-direction: column;
-      gap: 0.25rem;
-    }
-
-    .nav-item {
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-      padding: 1rem;
-      color: #475569;
-      text-decoration: none;
-      transition: all 150ms ease;
-      border-left: 3px solid transparent;
-
-      &:hover {
-        background-color: #f1f5f9;
-        color: #0a6cbc;
-      }
-
-      &.active {
-        color: #0a6cbc;
-        background-color: rgba(10, 108, 188, 0.05);
-        border-left-color: #0a6cbc;
-
-        .nav-icon {
-          color: #0a6cbc;
+        &.sidebar-collapsed {
+          width: 80px;
         }
       }
-    }
 
-    .nav-icon {
-      flex-shrink: 0;
-    }
+      .sidebar-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 1rem;
+        border-bottom: 1px solid #e2e8f0;
+        height: 70px;
+      }
 
-    .sidebar-footer {
-      padding: 1rem;
-      border-top: 1px solid #e2e8f0;
-      display: flex;
-      align-items: center;
-    }
+      .logo-container {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
 
-    .user-info {
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-      width: 100%;
-    }
+      .logo-icon {
+        color: #0a6cbc;
+      }
 
-    .user-avatar {
-      width: 40px;
-      height: 40px;
-      border-radius: 9999px;
-      background-color: #0a6cbc;
-      color: white;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 600;
-      flex-shrink: 0;
-    }
+      .logo-text {
+        font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+        font-weight: 700;
+        font-size: 1.25rem;
+        color: #0f172a;
+      }
 
-    .user-details {
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    }
+      .collapse-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        border-radius: 9999px;
+        background-color: #f1f5f9;
+        color: #475569;
+        border: none;
+        cursor: pointer;
+        transition: all 150ms ease;
 
-    .user-name {
-      font-weight: 600;
-      color: #0f172a;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
+        &:hover {
+          background-color: #e2e8f0;
+          color: #0f172a;
+        }
+      }
 
-    .user-role {
-      font-size: 0.75rem;
-      color: #64748b;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-  `,
+      .sidebar-content {
+        flex: 1;
+        overflow-y: auto;
+        padding: 1rem 0;
+      }
+
+      .sidebar-nav {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+      }
+
+      .nav-item {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 1rem;
+        color: #475569;
+        text-decoration: none;
+        transition: all 150ms ease;
+        border-left: 3px solid transparent;
+
+        &:hover {
+          background-color: #f1f5f9;
+          color: #0a6cbc;
+        }
+
+        &.active {
+          color: #0a6cbc;
+          background-color: rgba(10, 108, 188, 0.05);
+          border-left-color: #0a6cbc;
+
+          .nav-icon {
+            color: #0a6cbc;
+          }
+        }
+      }
+
+      .nav-icon {
+        flex-shrink: 0;
+      }
+
+      .sidebar-footer {
+        padding: 1rem;
+        border-top: 1px solid #e2e8f0;
+        display: flex;
+        align-items: center;
+      }
+
+      .user-info {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        width: 100%;
+      }
+
+      .user-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 9999px;
+        background-color: #0a6cbc;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        flex-shrink: 0;
+      }
+
+      .user-details {
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+
+      .user-name {
+        font-weight: 600;
+        color: #0f172a;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .user-role {
+        font-size: 0.75rem;
+        color: #64748b;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+    `,
   ],
 })
 export class SidebarComponent implements OnInit {
@@ -263,26 +263,27 @@ export class SidebarComponent implements OnInit {
     role: "Capitán",
   }
 
-  collapsed = false
+  collapsed = true
   isVisible = true // Controla la visibilidad del sidebar
 
   constructor(private router: Router) {}
 
   ngOnInit(): void {
-    // Cargar preferencia de colapso desde localStorage
-    const savedState = localStorage.getItem("sidebar_collapsed")
-    if (savedState) {
-      this.collapsed = savedState === "true"
-    }
+    // Limpiar estado anterior y empezar colapsado
+    this.resetSidebarState()
 
     // Detectar cambios de ruta
-    this.router.events
-      .pipe(filter((event) => event instanceof NavigationEnd))
-      .subscribe((event: NavigationEnd) => {
-        // Rutas donde el sidebar debe estar visible
-        const visibleRoutes = ["/shipment-reports", "/dashboard"]
-        this.isVisible = visibleRoutes.includes(event.urlAfterRedirects)
-      })
+    this.router.events.pipe(filter((event) => event instanceof NavigationEnd)).subscribe((event: NavigationEnd) => {
+      // Rutas donde el sidebar debe estar visible
+      const visibleRoutes = ["/shipment-reports", "/dashboard"]
+      this.isVisible = visibleRoutes.includes(event.urlAfterRedirects)
+    })
+  }
+
+  private resetSidebarState(): void {
+    // Limpiar localStorage y establecer estado inicial
+    localStorage.removeItem("sidebar_collapsed")
+    this.collapsed = true
   }
 
   toggleCollapse(): void {

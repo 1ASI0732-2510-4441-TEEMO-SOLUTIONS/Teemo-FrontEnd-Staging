@@ -3,7 +3,7 @@ import { CommonModule } from "@angular/common"
 import { FormsModule } from "@angular/forms"
 import * as L from "leaflet"
 import  { PortService, Port } from "../../../services/port.service"
-import  { RouteCalculationResource } from "../../../services/route.service"
+import { RouteCalculationResource } from "../../../services/route.service"
 
 interface PortCoordinates {
   latitude: number
@@ -15,7 +15,7 @@ interface RoutePort {
   coordinates: PortCoordinates
 }
 
-// Interfaz para datos GeoJSON
+
 interface GeoJSONFeature {
   type: "Feature"
   geometry: {
@@ -635,9 +635,9 @@ export class RouteAnimationComponent implements OnInit, OnDestroy, OnChanges {
   @Input() routeData: RouteCalculationResource | null = null
 
   private map: L.Map | null = null
-  private shipMarker: L.Marker | null = null
-  private routePolyline: L.Polyline | null = null
-  private traveledPolyline: L.Polyline | null = null
+  private shipMarkers: L.Marker[] = [] // Array of ship markers for different world copies
+  private routePolylines: L.Polyline[] = [] // Array of route polylines for different world copies
+  private traveledPolylines: L.Polyline[] = [] // Array of traveled polylines for different world copies
   private portMarkers: L.Marker[] = []
   private animationInterval: any = null
 
@@ -692,6 +692,10 @@ export class RouteAnimationComponent implements OnInit, OnDestroy, OnChanges {
     iconAnchor: [10, 10],
   })
 
+  // Add these properties after the existing ones
+  private userInteracting = false
+  private interactionTimeout: any = null
+
   constructor(private portService: PortService) {}
 
   ngOnInit(): void {
@@ -701,6 +705,12 @@ export class RouteAnimationComponent implements OnInit, OnDestroy, OnChanges {
 
   ngOnDestroy(): void {
     this.stopAnimation()
+
+    // Limpiar timeout de interacción
+    if (this.interactionTimeout) {
+      clearTimeout(this.interactionTimeout)
+    }
+
     if (this.map) {
       this.map.remove()
     }
@@ -726,13 +736,12 @@ export class RouteAnimationComponent implements OnInit, OnDestroy, OnChanges {
     this.currentPointIndex = 0
     this.currentPortIndex = 0
 
-    if (this.shipMarker && this.routePoints.length > 0) {
-      this.shipMarker.setLatLng(this.routePoints[0])
+    if (this.shipMarkers.length > 0 && this.routePoints.length > 0) {
+      this.updateShipMarkers(this.routePoints[0])
     }
 
-    if (this.traveledPolyline) {
-      this.traveledPolyline.setLatLngs([])
-    }
+    // Reset traveled polylines
+    this.updateTraveledPolylines([])
   }
 
   updateAnimationSpeed(): void {
@@ -793,14 +802,17 @@ export class RouteAnimationComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   private initializeMap(): void {
-    // Inicializar el mapa centrado en el mundo
-    this.map = L.map("route-map").setView([20, 0], 2)
+    // Inicializar el mapa con worldCopyJump habilitado para mejor manejo del antimeridiano
+    this.map = L.map("route-map", { worldCopyJump: true }).setView([20, 0], 2)
 
     // Añadir capa de mapa
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       attribution: "© OpenStreetMap contributors",
       maxZoom: 18,
     }).addTo(this.map)
+
+    // Configurar seguimiento de interacción del usuario
+    this.setupInteractionTracking()
 
     // Procesar datos de ruta si ya están disponibles
     if (this.routeData) {
@@ -901,26 +913,114 @@ export class RouteAnimationComponent implements OnInit, OnDestroy, OnChanges {
     }
 
     this.routePoints = []
+    let previousSegmentEndPointLatLng: L.LatLng | null = null
 
-    // Crear curvas inteligentes entre cada par de puertos consecutivos
     for (let i = 0; i < this.routePorts.length - 1; i++) {
-      const currentPort = this.routePorts[i]
-      const nextPort = this.routePorts[i + 1]
+      const currentPortData = this.routePorts[i] // { name, coordinates: {latitude, longitude} }
+      const nextPortData = this.routePorts[i + 1] // { name, coordinates: {latitude, longitude} }
 
-      console.log(`\n=== Creando ruta entre ${currentPort.name} y ${nextPort.name} ===`)
+      let segmentStartCoordinates: PortCoordinates
 
-      // Crear curva inteligente evitando tierra
-      const curvePoints = this.createIntelligentMaritimeCurve(currentPort.coordinates, nextPort.coordinates, 50)
-
-      // Añadir los puntos de la curva
       if (i === 0) {
-        this.routePoints.push(...curvePoints)
+        // Para el primer segmento, usar las coordenadas originales del puerto de inicio
+        segmentStartCoordinates = currentPortData.coordinates
       } else {
-        this.routePoints.push(...curvePoints.slice(1))
+        // Para segmentos subsecuentes, el inicio debe ser el final del segmento anterior
+        // para mantener la continuidad de la longitud desenrollada.
+        if (!previousSegmentEndPointLatLng) {
+          console.error(
+            `Error crítico: previousSegmentEndPointLatLng es nulo para el segmento ${i}. Usando coordenadas normalizadas como fallback.`,
+          )
+          // Fallback (aunque esto no debería ocurrir en un flujo normal)
+          segmentStartCoordinates = currentPortData.coordinates
+        } else {
+          segmentStartCoordinates = {
+            latitude: currentPortData.coordinates.latitude, // La latitud es la del puerto actual
+            longitude: previousSegmentEndPointLatLng.lng, // La longitud es la desenrollada del final del segmento anterior
+          }
+        }
+      }
+
+      console.log(
+        `\n=== Creando ruta desde ${currentPortData.name} (Lat: ${segmentStartCoordinates.latitude.toFixed(4)}, Lng: ${segmentStartCoordinates.longitude.toFixed(4)}) ` +
+        `hacia ${nextPortData.name} (Lat: ${nextPortData.coordinates.latitude.toFixed(4)}, Lng: ${nextPortData.coordinates.longitude.toFixed(4)}) ===`,
+      )
+
+      const curvePoints = this.createIntelligentMaritimeCurve(
+        segmentStartCoordinates,
+        nextPortData.coordinates, // Las coordenadas del puerto de destino son siempre las originales/normalizadas
+        50, // numPoints
+      )
+
+      if (curvePoints && curvePoints.length > 0) {
+        if (i === 0) {
+          this.routePoints.push(...curvePoints)
+        } else {
+          // Añadir puntos de la curva, omitiendo el primero para evitar duplicados,
+          // ya que curvePoints[0] es geográficamente el mismo que previousSegmentEndPointLatLng.
+          this.routePoints.push(...curvePoints.slice(1))
+        }
+        // Guardar el último punto de la curva actual (con longitud desenrollada)
+        // para usarlo como inicio del siguiente segmento.
+        previousSegmentEndPointLatLng = curvePoints[curvePoints.length - 1]
+      } else {
+        console.warn(
+          `No se generaron puntos de curva para el segmento: ${currentPortData.name} -> ${nextPortData.name}`,
+        )
+        // Si no se generan puntos, el siguiente segmento podría tener problemas para encontrar previousSegmentEndPointLatLng.
+        // Considerar cómo manejar este caso si es posible. Por ahora, se asume que siempre se generan puntos.
+        // Si es necesario, se podría intentar establecer previousSegmentEndPointLatLng a un valor basado en nextPortData,
+        // pero esto podría reintroducir problemas de salto si nextPortData está en un "mundo" diferente.
       }
     }
 
     console.log(`\nRuta marítima inteligente creada con ${this.routePoints.length} puntos`)
+
+    // Logging detallado para debugging del antimeridiano
+    if (this.routePoints.length > 0) {
+      console.log("=== ANÁLISIS DE PUNTOS DE RUTA ===")
+      console.log("Primer punto:", { lat: this.routePoints[0].lat.toFixed(4), lng: this.routePoints[0].lng.toFixed(4) })
+      console.log("Último punto:", {
+        lat: this.routePoints[this.routePoints.length - 1].lat.toFixed(4),
+        lng: this.routePoints[this.routePoints.length - 1].lng.toFixed(4),
+      })
+
+      let maxLngJump = 0
+      let jumpIndex = -1
+      for (let k = 1; k < this.routePoints.length; k++) {
+        const lngDiff = Math.abs(this.routePoints[k].lng - this.routePoints[k - 1].lng)
+        if (lngDiff > maxLngJump) {
+          maxLngJump = lngDiff
+          jumpIndex = k
+        }
+      }
+
+      if (maxLngJump > 180) {
+        // Un salto mayor a 180 grados es problemático
+        console.warn(`⚠️ SALTO BRUSCO DETECTADO en índice ${jumpIndex}:`)
+        console.warn(
+          `  Punto ${jumpIndex - 1}: lat=${this.routePoints[jumpIndex - 1].lat.toFixed(4)}, lng=${this.routePoints[jumpIndex - 1].lng.toFixed(4)}`,
+        )
+        console.warn(
+          `  Punto ${jumpIndex}: lat=${this.routePoints[jumpIndex].lat.toFixed(4)}, lng=${this.routePoints[jumpIndex].lng.toFixed(4)}`,
+        )
+        console.warn(`  Diferencia de longitud: ${maxLngJump.toFixed(4)}°`)
+      } else {
+        console.log(
+          "✓ Análisis de saltos de longitud: No se detectaron saltos bruscos (>180°). Máximo salto: ",
+          maxLngJump.toFixed(4) + "°",
+        )
+      }
+
+      const samplePoints = this.routePoints.filter(
+        (_, index) => index % Math.max(1, Math.floor(this.routePoints.length / 20)) === 0,
+      )
+      console.log(
+        "Muestra de puntos de ruta (cada ~5%):",
+        samplePoints.map((p) => ({ lat: p.lat.toFixed(2), lng: p.lng.toFixed(2) })),
+      )
+    }
+
     this.drawRoute()
   }
 
@@ -960,27 +1060,60 @@ export class RouteAnimationComponent implements OnInit, OnDestroy, OnChanges {
     return bestCurve.points
   }
 
-  private doesLineIntersectLandPrecise(start: PortCoordinates, end: PortCoordinates): boolean {
-    if (!this.geoJsonData) return false
-
-    // Usar muchos más puntos para una detección más precisa
-    const numTestPoints = 100
-    const deltaLat = (end.latitude - start.latitude) / numTestPoints
-    const deltaLng = (end.longitude - start.longitude) / numTestPoints
-
-    // Verificar cada segmento pequeño de la línea
-    for (let i = 0; i < numTestPoints; i++) {
-      const lat1 = start.latitude + i * deltaLat
-      const lng1 = start.longitude + i * deltaLng
-      const lat2 = start.latitude + (i + 1) * deltaLat
-      const lng2 = start.longitude + (i + 1) * deltaLng
-
-      // Verificar si este segmento intersecta con tierra
-      if (this.doesSegmentIntersectLand({ lat: lat1, lng: lng1 }, { lat: lat2, lng: lng2 })) {
-        return true
-      }
+  private doesLineIntersectLandPrecise(
+    start: PortCoordinates, // Las coordenadas pueden estar desenrolladas si vienen de un segmento de curva
+    end: PortCoordinates, // Las coordenadas pueden estar desenrolladas
+    numTestSegments = 100, // Valor por defecto para la prueba de línea recta inicial entre puertos
+  ): boolean {
+    if (!this.geoJsonData) {
+      return false
     }
 
+    const deltaLat = end.latitude - start.latitude
+    let actualDeltaLng: number
+
+    // Determinar el deltaLng a usar para la interpolación.
+    // Si las longitudes de inicio y fin ya están "cerca" en el espacio desenrollado
+    // (lo que es cierto para segmentos adyacentes de una curva generada con longitudes desenrolladas),
+    // entonces la diferencia directa es lo que queremos interpolar.
+    // Si están lejos (como las coordenadas originales de los puertos para la prueba de línea recta inicial),
+    // necesitamos calcular el camino más corto.
+    const directLngDiff = end.longitude - start.longitude
+
+    if (numTestSegments < 100 && Math.abs(directLngDiff) < 200) {
+      // Heurística: si es una prueba de segmento de curva (menos testPoints)
+      // Y la diferencia directa no es masiva (evitar errores si se pasa algo raro)
+      // entonces usar la diferencia directa.
+      actualDeltaLng = directLngDiff
+    } else {
+      // Para la prueba de línea recta inicial (numTestSegments = 100 por defecto)
+      // o si la diferencia directa es muy grande, usar el cálculo del camino más corto.
+      actualDeltaLng = this.calculateShortestLongitudeDelta(start.longitude, end.longitude)
+    }
+
+    // El primer punto del primer sub-segmento, normalizado para la prueba de intersección.
+    // start.longitude aquí puede estar desenrollado.
+    let p1_normalized = { lat: start.latitude, lng: this.normalizeLongitude(start.longitude) }
+    console.log(
+      `doesLineIntersectLandPrecise: Probando de ${JSON.stringify(start)} a ${JSON.stringify(end)} con deltaLng ${actualDeltaLng.toFixed(2)} y ${numTestSegments} segmentos.`,
+    )
+
+    for (let k = 1; k <= numTestSegments; k++) {
+      const t = k / numTestSegments
+      const currentLat = start.latitude + t * deltaLat
+      // Interpolar usando actualDeltaLng sobre el start.longitude original (que puede estar desenrollado)
+      const currentLng_unwrapped = start.longitude + t * actualDeltaLng
+      const p2_normalized = { lat: currentLat, lng: this.normalizeLongitude(currentLng_unwrapped) }
+
+      if (this.doesSegmentIntersectLand(p1_normalized, p2_normalized)) {
+        console.log(
+          `Intersección en doesLineIntersectLandPrecise: sub-segmento ${JSON.stringify(p1_normalized)} -> ${JSON.stringify(p2_normalized)} cruza tierra.`,
+        )
+        return true
+      }
+      p1_normalized = p2_normalized
+    }
+    console.log(`doesLineIntersectLandPrecise: No se encontraron intersecciones para el segmento.`)
     return false
   }
 
@@ -1059,6 +1192,7 @@ export class RouteAnimationComponent implements OnInit, OnDestroy, OnChanges {
     return t >= 0 && t <= 1 && u >= 0 && u <= 1
   }
 
+  // Reemplazar la función findBestCurveDirection con esta versión mejorada
   private findBestCurveDirection(
     start: PortCoordinates,
     end: PortCoordinates,
@@ -1069,34 +1203,68 @@ export class RouteAnimationComponent implements OnInit, OnDestroy, OnChanges {
     intersections: number
   } {
     const testDirections = [-2, -1.5, -1, -0.5, 0.5, 1, 1.5, 2] // Múltiples direcciones y intensidades
-    let bestOption = {
-      direction: 1,
-      points: this.createStraightLine(start, end, numPoints),
-      intersections: Number.MAX_SAFE_INTEGER,
+
+    const candidates: Array<{
+      direction: number
+      points: L.LatLng[]
+      intersections: number
+      absDirection: number
+    }> = []
+
+    console.log(`findBestCurveDirection: Buscando curva entre ${JSON.stringify(start)} y ${JSON.stringify(end)}`)
+
+    for (const dir of testDirections) {
+      const currentPoints = this.createCurveWithDirection(start, end, dir, numPoints)
+      const currentIntersections = this.countCurveIntersections(currentPoints)
+      console.log(`Probando dirección ${dir}: ${currentIntersections} intersecciones`)
+      candidates.push({
+        direction: dir,
+        points: currentPoints,
+        intersections: currentIntersections,
+        absDirection: Math.abs(dir),
+      })
     }
 
-    for (const direction of testDirections) {
-      const curvePoints = this.createCurveWithDirection(start, end, direction, numPoints)
-      const intersections = this.countCurveIntersections(curvePoints)
-
-      console.log(`Probando dirección ${direction}: ${intersections} intersecciones`)
-
-      if (intersections < bestOption.intersections) {
-        bestOption = {
-          direction,
-          points: curvePoints,
-          intersections,
-        }
+    // Ordenar los candidatos
+    candidates.sort((a, b) => {
+      // Prioridad 1: Menor número de intersecciones
+      if (a.intersections !== b.intersections) {
+        return a.intersections - b.intersections
       }
+      // Prioridad 2: Menor magnitud de curvatura (absDirection)
+      if (a.absDirection !== b.absDirection) {
+        return a.absDirection - b.absDirection
+      }
+      // Prioridad 3: Preferir dirección positiva (Este) si todo lo demás es igual
+      if (a.direction > 0 && b.direction < 0) return -1
+      if (a.direction < 0 && b.direction > 0) return 1
+      return 0 // Mismo signo o ambos cero
+    })
 
-      // Si encontramos una ruta sin intersecciones, la usamos
-      if (intersections === 0) {
-        console.log(`✓ Ruta sin intersecciones encontrada con dirección ${direction}`)
-        break
+    // El mejor candidato es el primero después de ordenar
+    const bestCandidate = candidates[0]
+
+    if (bestCandidate) {
+      console.log(
+        `Mejor opción elegida: dirección ${bestCandidate.direction}, intersecciones: ${bestCandidate.intersections}, absDirección: ${bestCandidate.absDirection}`,
+      )
+      return {
+        direction: bestCandidate.direction,
+        points: bestCandidate.points,
+        intersections: bestCandidate.intersections,
       }
     }
 
-    return bestOption
+    // Fallback: si algo salió mal y no hay candidatos (no debería pasar con testDirections no vacío)
+    console.warn(
+      "findBestCurveDirection: No se encontraron candidatos de curva válidos, devolviendo línea recta original.",
+    )
+    const straightLinePoints = this.createStraightLine(start, end, numPoints)
+    return {
+      direction: 0, // Indica línea recta
+      points: straightLinePoints,
+      intersections: this.countCurveIntersections(straightLinePoints),
+    }
   }
 
   private createCurveWithDirection(
@@ -1107,65 +1275,136 @@ export class RouteAnimationComponent implements OnInit, OnDestroy, OnChanges {
   ): L.LatLng[] {
     const points: L.LatLng[] = []
     const deltaLat = end.latitude - start.latitude
-    const deltaLng = end.longitude - start.longitude
+
+    // Calcular deltaLng para el camino más corto (crucial para antimeridiano)
+    const deltaLng = this.calculateShortestLongitudeDelta(start.longitude, end.longitude)
     const distance = Math.sqrt(deltaLat * deltaLat + deltaLng * deltaLng)
 
     // Calcular curvatura adaptativa basada en la distancia
     const baseCurvature = Math.min(distance * 0.3, 30)
     const curvature = baseCurvature * Math.abs(direction)
 
-    // Punto medio
+    // Punto medio en espacio desenrollado
     const midLat = (start.latitude + end.latitude) / 2
-    const midLng = (start.longitude + end.longitude) / 2
+    const midLng_unwrapped = start.longitude + deltaLng / 2
 
     // Calcular punto de control perpendicular
     const perpLat = (-deltaLng / distance) * curvature * Math.sign(direction)
-    const perpLng = (deltaLat / distance) * curvature * Math.sign(direction)
+    const perpLngOffset = (deltaLat / distance) * curvature * Math.sign(direction)
 
     const controlLat = midLat + perpLat
-    const controlLng = midLng + perpLng
+    const controlLng_initial = midLng_unwrapped + perpLngOffset
 
-    // Generar puntos de la curva de Bézier cuadrática
+    // Definir longitudes en espacio "desenrollado"
+    const p0_lng = start.longitude
+    const p2_lng_target = start.longitude + deltaLng // Punto final en espacio desenrollado
+
+    // Ajustar controlLng_initial para estar en el mismo continuo desenrollado
+    let p1_lng = controlLng_initial
+    const expectedMidLng = p0_lng + deltaLng / 2
+
+    // Si p1_lng está muy lejos del punto medio esperado, ajustarlo
+    if (Math.abs(p1_lng - expectedMidLng) > 180) {
+      if (deltaLng > 0 && p1_lng < expectedMidLng) {
+        p1_lng += 360
+      } else if (deltaLng < 0 && p1_lng > expectedMidLng) {
+        p1_lng -= 360
+      }
+    }
+
+    // Asegurar que p1_lng esté en el rango correcto respecto a p0_lng y p2_lng_target
+    while (p1_lng - p0_lng > 180) {
+      p1_lng -= 360
+    }
+    while (p0_lng - p1_lng > 180) {
+      p1_lng += 360
+    }
+
+    // Generar puntos de la curva de Bézier cuadrática en espacio desenrollado
     for (let i = 0; i <= numPoints; i++) {
       const t = i / numPoints
       const lat = Math.pow(1 - t, 2) * start.latitude + 2 * (1 - t) * t * controlLat + Math.pow(t, 2) * end.latitude
-      const lng = Math.pow(1 - t, 2) * start.longitude + 2 * (1 - t) * t * controlLng + Math.pow(t, 2) * end.longitude
-      points.push(L.latLng(lat, lng))
+
+      // Interpolación en espacio desenrollado
+      const lng_unwrapped = Math.pow(1 - t, 2) * p0_lng + 2 * (1 - t) * t * p1_lng + Math.pow(t, 2) * p2_lng_target
+
+      // NO normalizar aquí para los puntos de la ruta - Leaflet puede manejar longitudes fuera de [-180, 180]
+      points.push(L.latLng(lat, lng_unwrapped))
     }
 
     return points
   }
 
-  private countCurveIntersections(points: L.LatLng[]): number {
-    if (!this.geoJsonData) return 0
+  // Función auxiliar para calcular el delta de longitud más corto
+  private calculateShortestLongitudeDelta(startLng: number, endLng: number): number {
+    let delta = endLng - startLng
 
+    // Ajustar para tomar el camino más corto
+    if (delta > 180) {
+      delta -= 360
+    } else if (delta < -180) {
+      delta += 360
+    }
+
+    return delta
+  }
+
+  // Función auxiliar para normalizar longitud al rango [-180, 180]
+  private normalizeLongitude(lng: number): number {
+    while (lng > 180) {
+      lng -= 360
+    }
+    while (lng < -180) {
+      lng += 360
+    }
+    return lng
+  }
+
+  private countCurveIntersections(curvePoints: L.LatLng[]): number {
+    if (!this.geoJsonData || curvePoints.length < 2) {
+      return 0
+    }
     let intersections = 0
+    console.log(`countCurveIntersections: Verificando ${curvePoints.length - 1} segmentos de curva.`)
 
-    // Verificar cada segmento de la curva
-    for (let i = 0; i < points.length - 1; i++) {
-      const point1 = { lat: points[i].lat, lng: points[i].lng }
-      const point2 = { lat: points[i + 1].lat, lng: points[i + 1].lng }
+    for (let i = 0; i < curvePoints.length - 1; i++) {
+      const p1_unwrapped = curvePoints[i]
+      const p2_unwrapped = curvePoints[i + 1]
 
-      if (this.doesSegmentIntersectLand(point1, point2)) {
+      const segmentStart: PortCoordinates = { latitude: p1_unwrapped.lat, longitude: p1_unwrapped.lng }
+      const segmentEnd: PortCoordinates = { latitude: p2_unwrapped.lat, longitude: p2_unwrapped.lng }
+
+      // Usar un número pequeño de subsegmentos para doesLineIntersectLandPrecise,
+      // ya que el segmento de la curva generado por createCurveWithDirection ya es corto.
+      // Un valor como 5-10 debería ser suficiente.
+      if (this.doesLineIntersectLandPrecise(segmentStart, segmentEnd, 10)) {
+        console.log(
+          `Intersección contada para segmento de curva: ${JSON.stringify(segmentStart)} -> ${JSON.stringify(segmentEnd)}`,
+        )
         intersections++
       }
     }
-
+    console.log(`countCurveIntersections: Total de intersecciones encontradas: ${intersections}`)
     return intersections
   }
 
   private createStraightLine(start: PortCoordinates, end: PortCoordinates, numPoints: number): L.LatLng[] {
     const points: L.LatLng[] = []
     const deltaLat = end.latitude - start.latitude
-    const deltaLng = end.longitude - start.longitude
+    // Usar el delta de longitud más corto
+    const shortestDeltaLng = this.calculateShortestLongitudeDelta(start.longitude, end.longitude)
+
+    // Interpolar en el espacio desenrollado
+    const p0_lng = start.longitude
 
     for (let i = 0; i <= numPoints; i++) {
       const t = i / numPoints
       const lat = start.latitude + t * deltaLat
-      const lng = start.longitude + t * deltaLng
-      points.push(L.latLng(lat, lng))
+      // Interpolar longitud en espacio desenrollado
+      const lng_unwrapped = p0_lng + t * shortestDeltaLng
+      // NO normalizar aquí para los puntos de la ruta
+      points.push(L.latLng(lat, lng_unwrapped))
     }
-
     return points
   }
 
@@ -1233,30 +1472,78 @@ export class RouteAnimationComponent implements OnInit, OnDestroy, OnChanges {
     })
     this.portMarkers = []
 
-    // Limpiar rutas
-    if (this.routePolyline) {
-      this.map.removeLayer(this.routePolyline)
-      this.routePolyline = null
-    }
-    if (this.traveledPolyline) {
-      this.map.removeLayer(this.traveledPolyline)
-      this.traveledPolyline = null
-    }
+    // Limpiar rutas (múltiples copias)
+    this.routePolylines.forEach((polyline) => {
+      this.map!.removeLayer(polyline)
+    })
+    this.routePolylines = []
 
-    // Limpiar marcador del barco
-    if (this.shipMarker) {
-      this.map.removeLayer(this.shipMarker)
-      this.shipMarker = null
-    }
+    this.traveledPolylines.forEach((polyline) => {
+      this.map!.removeLayer(polyline)
+    })
+    this.traveledPolylines = []
+
+    // Limpiar marcadores del barco
+    this.shipMarkers.forEach((marker) => {
+      this.map!.removeLayer(marker)
+    })
+    this.shipMarkers = []
   }
 
   private fitMapToBounds(): void {
-    if (!this.map || this.routePoints.length === 0) {
+    if (!this.map) {
+      console.warn("fitMapToBounds: Mapa no disponible.")
       return
     }
 
-    const group = new L.FeatureGroup(this.portMarkers)
-    this.map.fitBounds(group.getBounds().pad(0.1))
+    if (this.routePorts.length > 0) {
+      // Detectar si la ruta cruza el antimeridiano
+      const crossesAntimeridian = this.detectAntimeridianCrossing()
+
+      if (crossesAntimeridian) {
+        // Centrar el mapa en el Pacífico para rutas que cruzan el antimeridiano
+        console.log("Ruta cruza el antimeridiano, centrando en el Pacífico")
+
+        // Calcular el centro de la ruta considerando el cruce del Pacífico
+        const lats = this.routePorts.map((port) => port.coordinates.latitude)
+        const avgLat = lats.reduce((sum, lat) => sum + lat, 0) / lats.length
+
+        // Centrar en el Pacífico (longitud -150 es aproximadamente el centro del Pacífico)
+        this.map.setView([avgLat, -150], 3)
+      } else {
+        // Para rutas que no cruzan el antimeridiano, usar el enfoque estándar
+        const bounds = L.latLngBounds(
+          this.routePorts.map((port) => [port.coordinates.latitude, port.coordinates.longitude]),
+        )
+        this.map.fitBounds(bounds.pad(0.1))
+      }
+    } else {
+      console.warn("fitMapToBounds: No hay puertos para ajustar los límites.")
+      this.map.setView([20, 0], 2)
+    }
+  }
+
+  private detectAntimeridianCrossing(): boolean {
+    if (this.routePorts.length < 2) return false
+
+    // Verificar si hay puertos en ambos lados del antimeridiano
+    let hasEasternHemisphere = false
+    let hasWesternHemisphere = false
+
+    for (const port of this.routePorts) {
+      const lng = this.normalizeLongitude(port.coordinates.longitude)
+      if (lng > 90 || lng < -90) {
+        // Puerto cerca del antimeridiano (longitud > 90° o < -90°)
+        if (lng > 0) {
+          hasEasternHemisphere = true
+        } else {
+          hasWesternHemisphere = true
+        }
+      }
+    }
+
+    // Si hay puertos en ambos lados del antimeridiano, la ruta probablemente lo cruza
+    return hasEasternHemisphere && hasWesternHemisphere
   }
 
   private addPortMarkerFromCoordinates(
@@ -1289,43 +1576,62 @@ export class RouteAnimationComponent implements OnInit, OnDestroy, OnChanges {
         iconSize = 25
       }
 
+      const iconHtml = `
+      <div style="
+        width: ${iconSize}px;
+        height: ${iconSize}px;
+        background-color: ${iconColor};
+        border: 3px solid white;
+        border-radius: 50%;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      ">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="white">
+          <path d="M12 2C8.13 2 5 5.13 5 9c0 4.17 4.42 9.92 6.24 12.11.4.48 1.13.48 1.53 0C14.58 18.92 19 13.17 19 9c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5S13.38 11.5 12 11.5z"/>
+        </svg>
+      </div>
+    `
+
       const portIcon = L.divIcon({
-        html: `
-        <div style="
-          width: ${iconSize}px;
-          height: ${iconSize}px;
-          background-color: ${iconColor};
-          border: 3px solid white;
-          border-radius: 50%;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        ">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="white">
-            <path d="M20 16.2A4.5 4.5 0 0 0 17.5 8h-1.8A7 7 0 1 0 4 14.9"></path>
-            <path d="M12 12v9"></path>
-            <path d="M8 17h8"></path>
-          </svg>
-        </div>
-      `,
+        html: iconHtml,
         className: `port-marker port-${type}`,
         iconSize: [iconSize, iconSize],
         iconAnchor: [iconSize / 2, iconSize / 2],
       })
 
-      const marker = L.marker([coordinates.latitude, coordinates.longitude], { icon: portIcon })
-        .addTo(this.map)
-        .bindPopup(`
-        <div style="text-align: center;">
-          <strong>${portName}</strong><br>
-          <small>Tipo: ${type === "origin" ? "Origen" : type === "destination" ? "Destino" : "Puerto de Ruta"}</small><br>
-          <small>${coordinates.latitude.toFixed(4)}°, ${coordinates.longitude.toFixed(4)}°</small>
-        </div>
-      `)
+      const popupContent = `
+      <div style="text-align: center;">
+        <strong>${portName}</strong><br>
+        <small>Tipo: ${type === "origin" ? "Origen" : type === "destination" ? "Destino" : "Puerto de Ruta"}</small><br>
+        <small>${coordinates.latitude.toFixed(4)}°, ${this.normalizeLongitude(coordinates.longitude).toFixed(4)}°</small>
+      </div>
+    `
 
-      this.portMarkers.push(marker)
-      console.log(`Marcador añadido para ${portName} (${type}) en:`, coordinates)
+      // Marcador principal
+      const mainMarker = L.marker([coordinates.latitude, coordinates.longitude], { icon: portIcon })
+        .addTo(this.map)
+        .bindPopup(popupContent)
+      this.portMarkers.push(mainMarker)
+      console.log(`Marcador principal añadido para ${portName} (${type}) en:`, coordinates)
+
+      // Añadir copias de marcadores si worldCopyJump está activo
+      if (this.map.options.worldCopyJump) {
+        // Copia Este (+360°)
+        const markerCopyEast = L.marker([coordinates.latitude, coordinates.longitude + 360], { icon: portIcon })
+          .addTo(this.map)
+          .bindPopup(popupContent)
+        this.portMarkers.push(markerCopyEast)
+        console.log(`Marcador copia Este añadido para ${portName} en: ${coordinates.longitude + 360}°`)
+
+        // Copia Oeste (-360°)
+        const markerCopyWest = L.marker([coordinates.latitude, coordinates.longitude - 360], { icon: portIcon })
+          .addTo(this.map)
+          .bindPopup(popupContent)
+        this.portMarkers.push(markerCopyWest)
+        console.log(`Marcador copia Oeste añadido para ${portName} en: ${coordinates.longitude - 360}°`)
+      }
     } catch (error) {
       console.error(`Error al crear marcador para ${portName}:`, error)
     }
@@ -1337,26 +1643,101 @@ export class RouteAnimationComponent implements OnInit, OnDestroy, OnChanges {
     }
 
     // Limpiar rutas anteriores
-    if (this.routePolyline) {
-      this.map.removeLayer(this.routePolyline)
-    }
-    if (this.traveledPolyline) {
-      this.map.removeLayer(this.traveledPolyline)
-    }
+    this.routePolylines.forEach((polyline) => {
+      this.map!.removeLayer(polyline)
+    })
+    this.routePolylines = []
 
-    // Dibujar la ruta completa (en gris)
-    this.routePolyline = L.polyline(this.routePoints, {
+    this.traveledPolylines.forEach((polyline) => {
+      this.map!.removeLayer(polyline)
+    })
+    this.traveledPolylines = []
+
+    // Crear múltiples copias de las líneas de ruta para worldCopyJump
+    this.createRoutePolylines()
+    this.createTraveledPolylines()
+  }
+
+  private createRoutePolylines(): void {
+    if (!this.map || this.routePoints.length === 0) return
+
+    const routeOptions = {
       color: "#cbd5e1",
       weight: 4,
       opacity: 0.7,
-    }).addTo(this.map)
+      noClip: true,
+    }
 
-    // Dibujar la ruta recorrida (inicialmente vacía)
-    this.traveledPolyline = L.polyline([], {
+    // Crear polilínea principal
+    const mainPolyline = L.polyline(this.routePoints, routeOptions).addTo(this.map)
+    this.routePolylines.push(mainPolyline)
+
+    // Crear copias para worldCopyJump si está habilitado
+    if (this.map.options.worldCopyJump) {
+      // Copia Este (+360°)
+      const routePointsEast = this.routePoints.map((point) => L.latLng(point.lat, point.lng + 360))
+      const polylineEast = L.polyline(routePointsEast, routeOptions).addTo(this.map)
+      this.routePolylines.push(polylineEast)
+
+      // Copia Oeste (-360°)
+      const routePointsWest = this.routePoints.map((point) => L.latLng(point.lat, point.lng - 360))
+      const polylineWest = L.polyline(routePointsWest, routeOptions).addTo(this.map)
+      this.routePolylines.push(polylineWest)
+    }
+
+    console.log(`Creadas ${this.routePolylines.length} polilíneas de ruta`)
+  }
+
+  private createTraveledPolylines(): void {
+    if (!this.map) return
+
+    const traveledOptions = {
       color: "#0a6cbc",
       weight: 4,
       opacity: 0.9,
-    }).addTo(this.map)
+      noClip: true,
+    }
+
+    // Crear polilínea principal (inicialmente vacía)
+    const mainTraveledPolyline = L.polyline([], traveledOptions).addTo(this.map)
+    this.traveledPolylines.push(mainTraveledPolyline)
+
+    // Crear copias para worldCopyJump si está habilitado
+    if (this.map.options.worldCopyJump) {
+      // Copia Este (+360°)
+      const traveledPolylineEast = L.polyline([], traveledOptions).addTo(this.map)
+      this.traveledPolylines.push(traveledPolylineEast)
+
+      // Copia Oeste (-360°)
+      const traveledPolylineWest = L.polyline([], traveledOptions).addTo(this.map)
+      this.traveledPolylines.push(traveledPolylineWest)
+    }
+
+    console.log(`Creadas ${this.traveledPolylines.length} polilíneas de progreso`)
+  }
+
+  private updateTraveledPolylines(traveledPoints: L.LatLng[]): void {
+    if (this.traveledPolylines.length === 0) return
+
+    // Actualizar polilínea principal
+    if (this.traveledPolylines[0]) {
+      this.traveledPolylines[0].setLatLngs(traveledPoints)
+    }
+
+    // Actualizar copias si existen
+    if (this.map?.options.worldCopyJump && this.traveledPolylines.length >= 3) {
+      // Copia Este (+360°)
+      if (this.traveledPolylines[1]) {
+        const traveledPointsEast = traveledPoints.map((point) => L.latLng(point.lat, point.lng + 360))
+        this.traveledPolylines[1].setLatLngs(traveledPointsEast)
+      }
+
+      // Copia Oeste (-360°)
+      if (this.traveledPolylines[2]) {
+        const traveledPointsWest = traveledPoints.map((point) => L.latLng(point.lat, point.lng - 360))
+        this.traveledPolylines[2].setLatLngs(traveledPointsWest)
+      }
+    }
   }
 
   private startAnimation(): void {
@@ -1367,11 +1748,9 @@ export class RouteAnimationComponent implements OnInit, OnDestroy, OnChanges {
 
     this.isAnimating = true
 
-    // Crear marcador del barco si no existe
-    if (!this.shipMarker && this.map) {
-      this.shipMarker = L.marker(this.routePoints[this.currentPointIndex], {
-        icon: this.shipIcon,
-      }).addTo(this.map)
+    // Crear marcadores del barco si no existen (múltiples copias para worldCopyJump)
+    if (this.shipMarkers.length === 0 && this.map) {
+      this.createShipMarkers(this.routePoints[this.currentPointIndex])
     }
 
     // Iniciar la animación
@@ -1381,51 +1760,152 @@ export class RouteAnimationComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   private animateStep(): void {
-    if (!this.shipMarker || !this.traveledPolyline || this.currentPointIndex >= this.routePoints.length - 1) {
+    if (
+      this.shipMarkers.length === 0 ||
+      this.traveledPolylines.length === 0 ||
+      this.currentPointIndex >= this.routePoints.length - 1
+    ) {
       this.stopAnimation()
       return
     }
 
-    // Mover el barco al siguiente punto
     this.currentPointIndex++
-    const currentPoint = this.routePoints[this.currentPointIndex]
-    this.shipMarker.setLatLng(currentPoint)
+    const currentTargetPoint = this.routePoints[this.currentPointIndex]
 
-    // Actualizar la línea recorrida
+    // Actualizar todas las copias del marcador del barco
+    this.updateShipMarkers(currentTargetPoint)
+
+    // Actualizar todas las líneas de progreso
     const traveledPoints = this.routePoints.slice(0, this.currentPointIndex + 1)
-    this.traveledPolyline.setLatLngs(traveledPoints)
+    this.updateTraveledPolylines(traveledPoints)
 
-    // Actualizar el puerto actual
     this.updateCurrentPort()
   }
 
-  private updateCurrentPort(): void {
-    // Calcular qué puerto está más cerca del punto actual
-    if (this.routePorts.length === 0) return
+  // Método auxiliar para detectar si el usuario está interactuando con el mapa
+  private isUserInteractingWithMap(): boolean {
+    return this.userInteracting
+  }
 
-    let closestPortIndex = 0
-    let minDistance = Number.MAX_VALUE
+  private setupInteractionTracking(): void {
+    if (!this.map) return
 
-    const currentPoint = this.routePoints[this.currentPointIndex]
+    // Eventos que indican que el usuario está interactuando
+    const interactionEvents = ["mousedown", "touchstart", "wheel", "keydown"]
+    const endInteractionEvents = ["mouseup", "touchend", "keyup"]
 
-    this.routePorts.forEach((port, index) => {
-      const portLatLng = L.latLng(port.coordinates.latitude, port.coordinates.longitude)
-      const distance = currentPoint.distanceTo(portLatLng)
+    interactionEvents.forEach((eventType) => {
+      this.map!.on(eventType as any, () => {
+        this.userInteracting = true
 
-      if (distance < minDistance) {
-        minDistance = distance
-        closestPortIndex = index
-      }
+        // Limpiar timeout anterior
+        if (this.interactionTimeout) {
+          clearTimeout(this.interactionTimeout)
+        }
+
+        // Marcar como no interactuando después de 2 segundos de inactividad
+        this.interactionTimeout = setTimeout(() => {
+          this.userInteracting = false
+        }, 2000)
+      })
     })
 
-    this.currentPortIndex = closestPortIndex
+    endInteractionEvents.forEach((eventType) => {
+      this.map!.on(eventType as any, () => {
+        // Reducir el tiempo de espera cuando termina la interacción
+        if (this.interactionTimeout) {
+          clearTimeout(this.interactionTimeout)
+        }
+
+        this.interactionTimeout = setTimeout(() => {
+          this.userInteracting = false
+        }, 1000)
+      })
+    })
   }
 
   private stopAnimation(): void {
     this.isAnimating = false
-    if (this.animationInterval) {
-      clearInterval(this.animationInterval)
-      this.animationInterval = null
+    clearInterval(this.animationInterval)
+  }
+
+  private updateCurrentPort(): void {
+    if (this.currentPointIndex < this.routePoints.length && this.routePorts.length > 0) {
+      const currentLatLng = this.routePoints[this.currentPointIndex]
+
+      // Buscar el puerto más cercano a la posición actual
+      let closestPortIndex = -1
+      let minDistance = Number.POSITIVE_INFINITY
+
+      for (let i = 0; i < this.routePorts.length; i++) {
+        const port = this.routePorts[i]
+        const portLatLng = L.latLng(port.coordinates.latitude, port.coordinates.longitude)
+        const distance = currentLatLng.distanceTo(portLatLng)
+
+        if (distance < minDistance) {
+          minDistance = distance
+          closestPortIndex = i
+        }
+      }
+
+      // Actualizar el índice del puerto actual si se encuentra uno más cercano
+      if (closestPortIndex !== -1) {
+        this.currentPortIndex = closestPortIndex
+      }
+    }
+  }
+
+  private createShipMarkers(position: L.LatLng): void {
+    if (!this.map) return
+
+    // Limpiar marcadores existentes
+    this.shipMarkers.forEach((marker) => {
+      this.map!.removeLayer(marker)
+    })
+    this.shipMarkers = []
+
+    // Crear marcador principal
+    const mainMarker = L.marker([position.lat, position.lng], {
+      icon: this.shipIcon,
+    }).addTo(this.map)
+    this.shipMarkers.push(mainMarker)
+
+    // Crear copias para worldCopyJump si está habilitado
+    if (this.map.options.worldCopyJump) {
+      // Copia Este (+360°)
+      const markerCopyEast = L.marker([position.lat, position.lng + 360], {
+        icon: this.shipIcon,
+      }).addTo(this.map)
+      this.shipMarkers.push(markerCopyEast)
+
+      // Copia Oeste (-360°)
+      const markerCopyWest = L.marker([position.lat, position.lng - 360], {
+        icon: this.shipIcon,
+      }).addTo(this.map)
+      this.shipMarkers.push(markerCopyWest)
+    }
+
+    console.log(`Creados ${this.shipMarkers.length} marcadores de barco en posición:`, position)
+  }
+
+  private updateShipMarkers(position: L.LatLng): void {
+    if (!this.map || this.shipMarkers.length === 0) return
+
+    // Actualizar marcador principal
+    if (this.shipMarkers[0]) {
+      this.shipMarkers[0].setLatLng([position.lat, position.lng])
+    }
+
+    // Actualizar copias si existen
+    if (this.map.options.worldCopyJump && this.shipMarkers.length >= 3) {
+      // Copia Este
+      if (this.shipMarkers[1]) {
+        this.shipMarkers[1].setLatLng([position.lat, position.lng + 360])
+      }
+      // Copia Oeste
+      if (this.shipMarkers[2]) {
+        this.shipMarkers[2].setLatLng([position.lat, position.lng - 360])
+      }
     }
   }
 }

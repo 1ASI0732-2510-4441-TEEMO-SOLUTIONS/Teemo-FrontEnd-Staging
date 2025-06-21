@@ -1,8 +1,8 @@
-import { Component, type OnInit, type AfterViewInit, type OnDestroy } from "@angular/core"
+import { Component, type OnInit, type AfterViewInit, type OnDestroy, HostListener } from "@angular/core"
 import { CommonModule } from "@angular/common"
 import { RouterModule } from "@angular/router"
 import { FormsModule } from "@angular/forms"
-import  { NearbyPortService, NearbyPort } from "../../../services/nearby-port.service"
+import { NearbyPortService, NearbyPort } from "../../../services/nearby-port.service"
 import  { PortService, Port } from "../../../services/port.service"
 import * as L from "leaflet"
 import { Subscription } from "rxjs"
@@ -20,7 +20,6 @@ import { HeaderComponent } from "../../shared/header/header.component"
       <div class="main-content">
         <app-header
           pageTitle="Informacion de Puertos"
-          [breadcrumbs]="[{label: 'Informacion de Puertos'}]"
           [notificationCount]="1"
         >
           <button class="btn-primary">
@@ -45,120 +44,122 @@ import { HeaderComponent } from "../../shared/header/header.component"
               <div id="nearby-ports-map" class="map-canvas"></div>
             </div>
 
-            <div class="ports-list-container">
-              <div class="ports-list-header">
-                <h2>Puertos Cercanos</h2>
-                <div class="search-container">
-                  <input
-                    type="text"
-                    placeholder="Buscar puerto..."
-                    [(ngModel)]="searchTerm"
-                    (input)="filterPorts()"
-                    class="search-input"
-                  >
-                </div>
-              </div>
-
-              <div class="loading-container" *ngIf="loading">
-                <div class="spinner"></div>
-                <span>Buscando puertos cercanos...</span>
-              </div>
-
-              <div class="no-ports" *ngIf="!loading && filteredPorts.length === 0">
-                No se encontraron puertos cercanos.
-              </div>
-
-              <div class="ports-list" *ngIf="!loading && filteredPorts.length > 0">
-                <div
-                  class="port-item"
-                  *ngFor="let port of filteredPorts"
-                  [class.selected]="selectedPort?.id === port.id"
-                  (click)="selectPort(port)"
-                >
-                  <div class="port-header">
-                    <h3 class="port-name">{{ port.name }}</h3>
-                    <span class="port-status" [class.status-open]="port.status === 'open'" [class.status-closed]="port.status === 'closed'">
-                      {{ port.status === 'open' ? 'Abierto' : 'Cerrado' }}
-                    </span>
+            <div class="content-container">
+              <div class="ports-list-container">
+                <div class="ports-list-header">
+                  <h2>Puertos Cercanos</h2>
+                  <div class="search-container">
+                    <input
+                      type="text"
+                      placeholder="Buscar puerto..."
+                      [(ngModel)]="searchTerm"
+                      (input)="filterPorts()"
+                      class="search-input"
+                    >
                   </div>
-                  <div class="port-country">{{ port.country }}</div>
-                  <div class="port-distance">{{ port.distance.toFixed(1) }} millas náuticas</div>
                 </div>
-              </div>
-            </div>
 
-            <div class="port-details-container" *ngIf="selectedPort">
-              <div class="port-details-header">
-                <h2>Detalles del Puerto</h2>
-              </div>
-              <div class="port-details-content">
-                <div class="port-detail-section">
-                  <h3>Información General</h3>
-                  <div class="detail-grid">
-                    <div class="detail-item">
-                      <span class="detail-label">Nombre:</span>
-                      <span class="detail-value">{{ selectedPort.name }}</span>
-                    </div>
-                    <div class="detail-item">
-                      <span class="detail-label">País:</span>
-                      <span class="detail-value">{{ selectedPort.country }}</span>
-                    </div>
-                    <div class="detail-item">
-                      <span class="detail-label">Estado:</span>
-                      <span class="detail-value" [class.status-open]="selectedPort.status === 'open'" [class.status-closed]="selectedPort.status === 'closed'">
-                        {{ selectedPort.status === 'open' ? 'Abierto' : 'Cerrado' }}
+                <div class="loading-container" *ngIf="loading">
+                  <div class="spinner"></div>
+                  <span>Buscando puertos cercanos...</span>
+                </div>
+
+                <div class="no-ports" *ngIf="!loading && filteredPorts.length === 0">
+                  No se encontraron puertos cercanos.
+                </div>
+
+                <div class="ports-list" *ngIf="!loading && filteredPorts.length > 0">
+                  <div
+                    class="port-item"
+                    *ngFor="let port of filteredPorts"
+                    [class.selected]="selectedPort?.id === port.id"
+                    (click)="selectPort(port)"
+                  >
+                    <div class="port-header">
+                      <h3 class="port-name">{{ port.name }}</h3>
+                      <span class="port-status" [class.status-open]="port.status === 'open'" [class.status-closed]="port.status === 'closed'">
+                        {{ port.status === 'open' ? 'Abierto' : 'Cerrado' }}
                       </span>
                     </div>
-                    <div class="detail-item">
-                      <span class="detail-label">Distancia:</span>
-                      <span class="detail-value">{{ selectedPort.distance.toFixed(1) }} millas náuticas</span>
-                    </div>
-                    <div class="detail-item">
-                      <span class="detail-label">Profundidad Máxima:</span>
-                      <span class="detail-value">{{ selectedPort.maxDepth }} metros</span>
-                    </div>
+                    <div class="port-country">{{ port.country }}</div>
+                    <div class="port-distance">{{ port.distance.toFixed(1) }} millas náuticas</div>
                   </div>
                 </div>
+              </div>
 
-                <div class="port-detail-section">
-                  <h3>Instalaciones Disponibles</h3>
-                  <div class="facilities-list">
-                    <div class="facility-item" *ngFor="let facility of selectedPort.facilities">
-                      <div class="facility-icon" [ngClass]="'facility-' + facility.toLowerCase()"></div>
-                      <div class="facility-name">{{ facility }}</div>
+              <div class="port-details-container" *ngIf="selectedPort">
+                <div class="port-details-header">
+                  <h2>Detalles del Puerto</h2>
+                </div>
+                <div class="port-details-content">
+                  <div class="port-detail-section">
+                    <h3>Información General</h3>
+                    <div class="detail-grid">
+                      <div class="detail-item">
+                        <span class="detail-label">Nombre:</span>
+                        <span class="detail-value">{{ selectedPort.name }}</span>
+                      </div>
+                      <div class="detail-item">
+                        <span class="detail-label">País:</span>
+                        <span class="detail-value">{{ selectedPort.country }}</span>
+                      </div>
+                      <div class="detail-item">
+                        <span class="detail-label">Estado:</span>
+                        <span class="detail-value" [class.status-open]="selectedPort.status === 'open'" [class.status-closed]="selectedPort.status === 'closed'">
+                          {{ selectedPort.status === 'open' ? 'Abierto' : 'Cerrado' }}
+                        </span>
+                      </div>
+                      <div class="detail-item">
+                        <span class="detail-label">Distancia:</span>
+                        <span class="detail-value">{{ selectedPort.distance.toFixed(1) }} millas náuticas</span>
+                      </div>
+                      <div class="detail-item">
+                        <span class="detail-label">Profundidad Máxima:</span>
+                        <span class="detail-value">{{ selectedPort.maxDepth }} metros</span>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <div class="port-detail-section">
-                  <h3>Información de Contacto</h3>
-                  <div class="contact-grid">
-                    <div class="contact-item">
-                      <span class="contact-label">Teléfono:</span>
-                      <span class="contact-value">{{ selectedPort.contactInfo.phone }}</span>
+                  <div class="port-detail-section">
+                    <h3>Instalaciones Disponibles</h3>
+                    <div class="facilities-list">
+                      <div class="facility-item" *ngFor="let facility of selectedPort.facilities">
+                        <div class="facility-icon" [ngClass]="'facility-' + facility.toLowerCase()"></div>
+                        <div class="facility-name">{{ facility }}</div>
+                      </div>
                     </div>
-                    <div class="contact-item">
-                      <span class="contact-label">Email:</span>
-                      <span class="contact-value">{{ selectedPort.contactInfo.email }}</span>
-                    </div>
-                    <div class="contact-item">
-                      <span class="contact-label">Canal VHF:</span>
-                      <span class="contact-value">{{ selectedPort.contactInfo.vhfChannel }}</span>
+                  </div>
+
+                  <div class="port-detail-section">
+                    <h3>Información de Contacto</h3>
+                    <div class="contact-grid">
+                      <div class="contact-item">
+                        <span class="contact-label">Teléfono:</span>
+                        <span class="contact-value">{{ selectedPort.contactInfo.phone }}</span>
+                      </div>
+                      <div class="contact-item">
+                        <span class="contact-label">Email:</span>
+                        <span class="contact-value">{{ selectedPort.contactInfo.email }}</span>
+                      </div>
+                      <div class="contact-item">
+                        <span class="contact-label">Canal VHF:</span>
+                        <span class="contact-value">{{ selectedPort.contactInfo.vhfChannel }}</span>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
 
-            <div class="no-port-selected" *ngIf="!selectedPort">
-              <div class="no-port-message">
-                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <circle cx="12" cy="12" r="10"></circle>
-                  <line x1="12" y1="8" x2="12" y2="12"></line>
-                  <line x1="12" y1="16" x2="12.01" y2="16"></line>
-                </svg>
-                <h3>Seleccione un puerto para ver sus detalles</h3>
-                <p>Haga clic en uno de los puertos de la lista para ver información detallada.</p>
+              <div class="no-port-selected" *ngIf="!selectedPort">
+                <div class="no-port-message">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="8" x2="12" y2="12"></line>
+                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                  </svg>
+                  <h3>Seleccione un puerto para ver sus detalles</h3>
+                  <p>Haga clic en uno de los puertos de la lista para ver información detallada.</p>
+                </div>
               </div>
             </div>
           </div>
@@ -185,115 +186,31 @@ import { HeaderComponent } from "../../shared/header/header.component"
       }
 
       .nearby-ports-content {
-        padding: 2rem;
-        padding-top: calc(70px + 2rem);
+        padding: 1.5rem;
+        padding-top: calc(70px + 1.5rem);
+        height: 100vh;
+        overflow: hidden;
       }
 
       .nearby-ports-grid {
         display: grid;
-        grid-template-columns: 1fr 350px 400px;
+        grid-template-columns: 1fr 400px;
         gap: 1.5rem;
+        height: calc(100vh - 140px);
         max-width: 1400px;
         margin: 0 auto;
-        width: 100%;
-      }
-
-      .btn-primary {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.25rem;
-        background-color: #0a6cbc;
-        color: white;
-        border: none;
-        border-radius: 0.375rem;
-        padding: 0.5rem 1rem;
-        font-weight: 500;
-        cursor: pointer;
-        transition: background-color 150ms ease;
-
-        &:hover {
-          background-color: #084e88;
-        }
-
-        svg {
-          flex-shrink: 0;
-        }
-      }
-
-      .mr-2 {
-        margin-right: 0.5rem;
-      }
-
-      @media (max-width: 1200px) {
-        .nearby-ports-grid {
-          grid-template-columns: 1fr 1fr;
-        }
-
-        .map-container {
-          grid-column: 1 / -1;
-        }
-
-        .port-details-container, .no-port-selected {
-          grid-column: 2;
-        }
-      }
-
-      @media (max-width: 768px) {
-        .nearby-ports-grid {
-          grid-template-columns: 1fr;
-        }
-
-        .ports-list-container, .port-details-container, .no-port-selected {
-          grid-column: 1;
-        }
-      }
-
-      .nearby-ports-container {
-        display: flex;
-        flex-direction: column;
-        height: 100vh;
-        background-color: #f5f7fa;
-      }
-
-      .nearby-ports-header {
-        background-color: white;
-        padding: 1rem 2rem;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-      }
-
-      .header-content {
-        max-width: 1400px;
-        margin: 0 auto;
-      }
-
-      .nearby-ports-header h1 {
-        margin: 0;
-        color: #2c3e50;
-        font-size: 1.8rem;
-      }
-
-      .breadcrumbs {
-        margin-top: 0.5rem;
-        font-size: 0.9rem;
-        color: #5f6368;
-      }
-
-      .breadcrumbs a {
-        color: #1a73e8;
-        text-decoration: none;
-      }
-
-      .breadcrumbs a:hover {
-        text-decoration: underline;
       }
 
       .map-container {
-        grid-column: 1;
         background-color: white;
         border-radius: 8px;
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
         display: flex;
         flex-direction: column;
+        height: 100%;
+        overflow: hidden;
+        position: relative;
+        z-index: 1;
       }
 
       .map-header {
@@ -302,6 +219,7 @@ import { HeaderComponent } from "../../shared/header/header.component"
         display: flex;
         justify-content: space-between;
         align-items: center;
+        flex-shrink: 0;
       }
 
       .map-header h2 {
@@ -326,21 +244,34 @@ import { HeaderComponent } from "../../shared/header/header.component"
 
       .map-canvas {
         flex: 1;
-        min-height: 400px;
+        min-height: 0;
+        width: 100%;
+        position: relative;
+        z-index: 1;
+      }
+
+      .content-container {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        height: 100%;
+        overflow: hidden;
       }
 
       .ports-list-container {
-        grid-column: 2;
         background-color: white;
         border-radius: 8px;
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
         display: flex;
         flex-direction: column;
+        height: 45%;
+        overflow: hidden;
       }
 
       .ports-list-header {
         padding: 1rem;
         border-bottom: 1px solid #e0e0e0;
+        flex-shrink: 0;
       }
 
       .ports-list-header h2 {
@@ -399,14 +330,16 @@ import { HeaderComponent } from "../../shared/header/header.component"
         flex: 1;
         overflow-y: auto;
         padding: 0.5rem;
+        min-height: 0;
       }
 
       .port-item {
-        padding: 1rem;
+        padding: 0.75rem;
         border-radius: 4px;
         margin-bottom: 0.5rem;
         cursor: pointer;
         transition: background-color 0.2s;
+        border: 1px solid transparent;
       }
 
       .port-item:hover {
@@ -415,7 +348,7 @@ import { HeaderComponent } from "../../shared/header/header.component"
 
       .port-item.selected {
         background-color: #e8f0fe;
-        border-left: 3px solid #1a73e8;
+        border-color: #1a73e8;
       }
 
       .port-header {
@@ -427,14 +360,16 @@ import { HeaderComponent } from "../../shared/header/header.component"
 
       .port-name {
         margin: 0;
-        font-size: 1rem;
+        font-size: 0.95rem;
         color: #2c3e50;
+        font-weight: 500;
       }
 
       .port-status {
-        font-size: 0.8rem;
-        padding: 0.25rem 0.5rem;
+        font-size: 0.75rem;
+        padding: 0.2rem 0.5rem;
         border-radius: 12px;
+        font-weight: 500;
       }
 
       .status-open {
@@ -448,29 +383,31 @@ import { HeaderComponent } from "../../shared/header/header.component"
       }
 
       .port-country {
-        font-size: 0.9rem;
+        font-size: 0.85rem;
         color: #5f6368;
-        margin-bottom: 0.5rem;
+        margin-bottom: 0.25rem;
       }
 
       .port-distance {
-        font-size: 0.9rem;
+        font-size: 0.85rem;
         color: #1a73e8;
         font-weight: 500;
       }
 
-      .port-details-container {
-        grid-column: 3;
+      .port-details-container, .no-port-selected {
         background-color: white;
         border-radius: 8px;
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
         display: flex;
         flex-direction: column;
+        height: 55%;
+        overflow: hidden;
       }
 
       .port-details-header {
         padding: 1rem;
         border-bottom: 1px solid #e0e0e0;
+        flex-shrink: 0;
       }
 
       .port-details-header h2 {
@@ -480,17 +417,23 @@ import { HeaderComponent } from "../../shared/header/header.component"
       }
 
       .port-details-content {
-        padding: 1.5rem;
+        padding: 1rem;
         overflow-y: auto;
+        flex: 1;
+        min-height: 0;
       }
 
       .port-detail-section {
-        margin-bottom: 2rem;
+        margin-bottom: 1.5rem;
+      }
+
+      .port-detail-section:last-child {
+        margin-bottom: 0;
       }
 
       .port-detail-section h3 {
-        margin: 0 0 1rem 0;
-        font-size: 1.1rem;
+        margin: 0 0 0.75rem 0;
+        font-size: 1rem;
         color: #2c3e50;
         padding-bottom: 0.5rem;
         border-bottom: 1px solid #e0e0e0;
@@ -498,8 +441,8 @@ import { HeaderComponent } from "../../shared/header/header.component"
 
       .detail-grid {
         display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        gap: 1rem;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.75rem;
       }
 
       .detail-item {
@@ -508,13 +451,15 @@ import { HeaderComponent } from "../../shared/header/header.component"
       }
 
       .detail-label {
-        font-size: 0.8rem;
+        font-size: 0.75rem;
         color: #5f6368;
         margin-bottom: 0.25rem;
+        text-transform: uppercase;
+        font-weight: 500;
       }
 
       .detail-value {
-        font-size: 0.95rem;
+        font-size: 0.9rem;
         color: #2c3e50;
         font-weight: 500;
       }
@@ -522,57 +467,41 @@ import { HeaderComponent } from "../../shared/header/header.component"
       .facilities-list {
         display: flex;
         flex-wrap: wrap;
-        gap: 1rem;
+        gap: 0.5rem;
       }
 
       .facility-item {
         display: flex;
         align-items: center;
         gap: 0.5rem;
-        padding: 0.5rem 1rem;
+        padding: 0.4rem 0.75rem;
         background-color: #f8f9fa;
         border-radius: 4px;
+        font-size: 0.8rem;
       }
 
       .facility-icon {
-        width: 16px;
-        height: 16px;
+        width: 12px;
+        height: 12px;
         border-radius: 50%;
       }
 
-      .facility-fuel {
-        background-color: #fbbc05;
-      }
-
-      .facility-repairs {
-        background-color: #ea4335;
-      }
-
-      .facility-medical {
-        background-color: #34a853;
-      }
-
-      .facility-supplies {
-        background-color: #1a73e8;
-      }
-
-      .facility-customs {
-        background-color: #9c27b0;
-      }
-
-      .facility-security {
-        background-color: #607d8b;
-      }
+      .facility-fuel { background-color: #fbbc05; }
+      .facility-repairs { background-color: #ea4335; }
+      .facility-medical { background-color: #34a853; }
+      .facility-supplies { background-color: #1a73e8; }
+      .facility-customs { background-color: #9c27b0; }
+      .facility-security { background-color: #607d8b; }
 
       .facility-name {
-        font-size: 0.9rem;
+        font-size: 0.8rem;
         color: #2c3e50;
       }
 
       .contact-grid {
         display: grid;
         grid-template-columns: 1fr;
-        gap: 1rem;
+        gap: 0.75rem;
       }
 
       .contact-item {
@@ -581,24 +510,22 @@ import { HeaderComponent } from "../../shared/header/header.component"
       }
 
       .contact-label {
-        font-size: 0.8rem;
+        font-size: 0.75rem;
         color: #5f6368;
         margin-bottom: 0.25rem;
+        text-transform: uppercase;
+        font-weight: 500;
       }
 
       .contact-value {
-        font-size: 0.95rem;
+        font-size: 0.9rem;
         color: #2c3e50;
       }
 
       .no-port-selected {
-        grid-column: 3;
         display: flex;
         align-items: center;
         justify-content: center;
-        background-color: white;
-        border-radius: 8px;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
       }
 
       .no-port-message {
@@ -615,6 +542,7 @@ import { HeaderComponent } from "../../shared/header/header.component"
       .no-port-message h3 {
         margin: 0 0 0.5rem 0;
         color: #2c3e50;
+        font-size: 1.1rem;
       }
 
       .no-port-message p {
@@ -623,27 +551,86 @@ import { HeaderComponent } from "../../shared/header/header.component"
         font-size: 0.9rem;
       }
 
+      .btn-primary {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        background-color: #0a6cbc;
+        color: white;
+        border: none;
+        border-radius: 0.375rem;
+        padding: 0.5rem 1rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background-color 150ms ease;
+      }
+
+      .btn-primary:hover {
+        background-color: #084e88;
+      }
+
+      .btn-primary svg {
+        flex-shrink: 0;
+      }
+
+      .mr-2 {
+        margin-right: 0.5rem;
+      }
+
+      /* Responsive Design */
       @media (max-width: 1200px) {
-        .nearby-ports-content {
-          grid-template-columns: 1fr 1fr;
+        .nearby-ports-grid {
+          grid-template-columns: 1fr;
+          grid-template-rows: 400px 1fr;
+          height: calc(100vh - 120px);
         }
 
-        .map-container {
-          grid-column: 1 / -1;
+        .content-container {
+          grid-row: 2;
+          flex-direction: row;
+          gap: 1rem;
+        }
+
+        .ports-list-container {
+          height: 100%;
+          width: 50%;
         }
 
         .port-details-container, .no-port-selected {
-          grid-column: 2;
+          height: 100%;
+          width: 50%;
         }
       }
 
       @media (max-width: 768px) {
-        .nearby-ports-content {
-          grid-template-columns: 1fr;
+        .main-content {
+          margin-left: 0;
         }
 
-        .ports-list-container, .port-details-container, .no-port-selected {
-          grid-column: 1;
+        .nearby-ports-content {
+          padding: 1rem;
+          padding-top: calc(70px + 1rem);
+        }
+
+        .nearby-ports-grid {
+          grid-template-columns: 1fr;
+          grid-template-rows: 300px auto auto;
+          height: auto;
+          gap: 1rem;
+        }
+
+        .content-container {
+          flex-direction: column;
+        }
+
+        .ports-list-container {
+          height: 400px;
+          width: 100%;
+        }
+
+        .port-details-container, .no-port-selected {
+          height: 400px;
+          width: 100%;
         }
 
         .detail-grid {
@@ -881,6 +868,11 @@ export class NearbyPortsComponent implements OnInit, AfterViewInit, OnDestroy {
 
     // Añadir estilos para el marcador del barco
     this.addMapMarkerStyles()
+
+    // Invalidar el tamaño del mapa para asegurar que se renderice correctamente
+    setTimeout(() => {
+      this.map.invalidateSize()
+    }, 200)
   }
 
   private addPortsToMap(): void {
@@ -977,5 +969,14 @@ export class NearbyPortsComponent implements OnInit, AfterViewInit, OnDestroy {
       }
     `
     document.head.appendChild(style)
+  }
+
+  @HostListener("window:resize")
+  onResize() {
+    if (this.map) {
+      setTimeout(() => {
+        this.map.invalidateSize()
+      }, 200)
+    }
   }
 }

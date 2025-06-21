@@ -10,7 +10,7 @@ import  { PortService, Port } from "../../../services/port.service"
   template: `
     <div class="map-container scale-in">
       <div class="map-header">
-        <h3>Mapa de Rutas Marítimas</h3>
+        <h3>Mapa de Puertos Marítimos</h3>
         <div class="map-controls">
           <button class="map-btn" (click)="zoomIn()">Zoom In</button>
           <button class="map-btn" (click)="zoomOut()">Zoom Out</button>

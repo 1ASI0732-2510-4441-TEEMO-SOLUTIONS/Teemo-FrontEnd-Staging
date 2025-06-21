@@ -1,10 +1,11 @@
-import { Component, EventEmitter, type OnInit, Output } from "@angular/core"
+import { Component, EventEmitter, type OnInit, Output, Input } from "@angular/core"
 import { CommonModule } from "@angular/common"
 import { FormsModule } from "@angular/forms"
 import { PortService, Port } from "../../../services/port.service"
-import  { RouteService, RouteCalculationResource } from "../../../services/route.service"
+import { RouteService, RouteCalculationResource } from "../../../services/route.service"
 import { RouteAnimationComponent } from "../route-animation/route-animation.component"
 import { IncotermCalculatorComponent } from "../incoterm-calculator/incoterm-calculator.component"
+
 @Component({
   selector: "app-port-selector",
   standalone: true,
@@ -12,7 +13,7 @@ import { IncotermCalculatorComponent } from "../incoterm-calculator/incoterm-cal
   template: `
     <div class="port-selector-container">
       <div class="card-header">
-        <h2>Selección de Puertos para Nueva Ruta</h2>
+        <h2>{{ preselectedOrigin && preselectedDestination ? 'Ruta: ' + preselectedOrigin + ' → ' + preselectedDestination : 'Selección de Puertos para Nueva Ruta' }}</h2>
         <button class="btn-outline" (click)="onCancel()">
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -32,7 +33,8 @@ import { IncotermCalculatorComponent } from "../incoterm-calculator/incoterm-cal
         </button>
       </div>
 
-      <div class="port-selector-content">
+      <!-- Mostrar selector de puertos solo si no hay preselección o si hay error -->
+      <div class="port-selector-content" *ngIf="!preselectedOrigin || !preselectedDestination || !portsLoaded">
         <!-- Selector de Puerto de Origen -->
         <div class="port-selection-section">
           <h3>Puerto de Origen</h3>
@@ -250,8 +252,16 @@ import { IncotermCalculatorComponent } from "../incoterm-calculator/incoterm-cal
         </div>
       </div>
 
+      <!-- Mensaje de carga para rutas preseleccionadas -->
+      <div class="preselected-loading" *ngIf="preselectedOrigin && preselectedDestination && !portsLoaded">
+        <div class="loading-container">
+          <div class="loading-spinner"></div>
+          <p>Cargando ruta {{ preselectedOrigin }} → {{ preselectedDestination }}...</p>
+        </div>
+      </div>
+
       <!-- Selector de Puertos Intermedios -->
-      <div class="intermediate-ports-section">
+      <div class="intermediate-ports-section" *ngIf="portsLoaded">
         <h3>Puertos Intermedios (Opcional)</h3>
         <p class="section-description">Seleccione los puertos intermedios por los que desea que pase la ruta.</p>
 
@@ -416,7 +426,7 @@ import { IncotermCalculatorComponent } from "../incoterm-calculator/incoterm-cal
       </div>
 
       <!-- Botones de Acción -->
-      <div class="action-buttons">
+      <div class="action-buttons" *ngIf="portsLoaded">
         <button class="btn-outline" (click)="onCancel()">Cancelar</button>
         <button
           class="btn-secondary"
@@ -463,6 +473,31 @@ import { IncotermCalculatorComponent } from "../incoterm-calculator/incoterm-cal
           Crear Ruta
         </button>
         <button
+          class="btn-success"
+          [disabled]="!routeData || !routeCreated"
+          (click)="createReport()"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            class="mr-2"
+          >
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <line x1="16" y1="13" x2="8" y2="13"></line>
+            <line x1="16" y1="17" x2="8" y2="17"></line>
+            <polyline points="10 9 9 9 8 9"></polyline>
+          </svg>
+          Crear Reporte
+        </button>
+        <button
           class="btn-secondary"
           (click)="showIncotermForm = true"
           [disabled]="!routeData"
@@ -470,6 +505,31 @@ import { IncotermCalculatorComponent } from "../incoterm-calculator/incoterm-cal
           Calcular Incoterm
         </button>
       </div>
+
+      <!-- Modal de confirmación -->
+      <div class="modal-overlay" *ngIf="showConfirmationModal">
+        <div class="modal-container">
+          <div class="modal-header" [ngClass]="{'success': modalType === 'success', 'error': modalType === 'error'}">
+            <svg *ngIf="modalType === 'success'" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+              <polyline points="22 4 12 14.01 9 11.01"></polyline>
+            </svg>
+            <svg *ngIf="modalType === 'error'" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="15" y1="9" x2="9" y2="15"></line>
+              <line x1="9" y1="9" x2="15" y2="15"></line>
+            </svg>
+            <h3>{{ modalTitle }}</h3>
+          </div>
+          <div class="modal-body">
+            <p>{{ modalMessage }}</p>
+          </div>
+          <div class="modal-footer">
+            <button class="btn-primary" (click)="closeModal()">Aceptar</button>
+          </div>
+        </div>
+      </div>
+
       <app-incoterm-calculator
         *ngIf="showIncotermForm"
         [originPort]="selectedOriginPort?.name ?? ''"
@@ -482,422 +542,523 @@ import { IncotermCalculatorComponent } from "../incoterm-calculator/incoterm-cal
 
   styles: [
     `
-    .port-selector-container {
-      background-color: white;
-      border-radius: 0.5rem;
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
-      margin-bottom: 1.5rem;
-    }
+      .port-selector-container {
+        background-color: white;
+        border-radius: 0.5rem;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        margin-bottom: 1.5rem;
+      }
 
-    .card-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 1rem 1.5rem;
-      border-bottom: 1px solid #e2e8f0;
+      .card-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 1rem 1.5rem;
+        border-bottom: 1px solid #e2e8f0;
 
-      h2 {
+        h2 {
+          margin: 0;
+          font-size: 1.25rem;
+          font-weight: 600;
+          color: #0f172a;
+        }
+      }
+
+      .preselected-loading {
+        padding: 3rem 1.5rem;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+
+      .port-selector-content {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.5rem;
+        padding: 1.5rem;
+
+        @media (max-width: 768px) {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .port-selection-section {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+
+        h3 {
+          margin: 0;
+          font-size: 1rem;
+          font-weight: 600;
+          color: #0f172a;
+        }
+      }
+
+      .search-container {
+        position: relative;
+      }
+
+      .search-input-wrapper {
+        position: relative;
+      }
+
+      .search-input {
+        width: 100%;
+        padding: 0.5rem 2.5rem 0.5rem 0.75rem;
+        border: 1px solid #cbd5e1;
+        border-radius: 0.375rem;
+        font-size: 0.875rem;
+        outline: none;
+        transition: border-color 150ms ease;
+
+        &:focus {
+          border-color: #0a6cbc;
+          box-shadow: 0 0 0 1px rgba(10, 108, 188, 0.2);
+        }
+      }
+
+      .search-icon {
+        position: absolute;
+        right: 0.75rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #64748b;
+        pointer-events: none;
+      }
+
+      .search-clear-icon {
+        position: absolute;
+        right: 0.75rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #64748b;
+        cursor: pointer;
+        z-index: 1;
+
+        &:hover {
+          color: #475569;
+        }
+      }
+
+      .port-list-container {
+        display: flex;
+        flex-direction: column;
+        border: 1px solid #e2e8f0;
+        border-radius: 0.375rem;
+        overflow: hidden;
+        height: 300px;
+      }
+
+      .port-list-header {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        padding: 0.5rem 1rem;
+        background-color: #f1f5f9;
+        border-bottom: 1px solid #e2e8f0;
+        font-weight: 600;
+        font-size: 0.75rem;
+        color: #475569;
+        text-transform: uppercase;
+      }
+
+      .port-list {
+        flex: 1;
+        overflow-y: auto;
+        padding: 0.5rem 0;
+      }
+
+      .port-item {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        padding: 0.5rem 1rem;
+        cursor: pointer;
+        transition: background-color 150ms ease;
+
+        &:hover:not(.disabled) {
+          background-color: #f8fafc;
+        }
+
+        &.selected {
+          background-color: rgba(10, 108, 188, 0.1);
+        }
+
+        &.disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+      }
+
+      .port-name {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-weight: 500;
+      }
+
+      .port-icon {
+        color: #0a6cbc;
+      }
+
+      .port-continent {
+        color: #64748b;
+        font-size: 0.875rem;
+      }
+
+      .loading-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        gap: 1rem;
+        color: #64748b;
+      }
+
+      .loading-spinner {
+        width: 2rem;
+        height: 2rem;
+        border: 2px solid rgba(10, 108, 188, 0.2);
+        border-top-color: #0a6cbc;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      .empty-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        gap: 1rem;
+        color: #64748b;
+        padding: 1rem;
+        text-align: center;
+      }
+
+      .empty-icon {
+        color: #94a3b8;
+      }
+
+      .intermediate-ports-section {
+        padding: 1.5rem;
+        border-top: 1px solid #e2e8f0;
+
+        h3 {
+          margin: 0 0 0.5rem 0;
+          font-size: 1rem;
+          font-weight: 600;
+          color: #0f172a;
+        }
+
+        .section-description {
+          margin: 0 0 1rem 0;
+          font-size: 0.875rem;
+          color: #64748b;
+        }
+      }
+
+      .intermediate-ports-container {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        margin-top: 1rem;
+      }
+
+      .selected-ports {
+        background-color: #f8fafc;
+        border-radius: 0.375rem;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        border: 1px solid #e2e8f0;
+
+        h4 {
+          margin: 0 0 0.5rem 0;
+          font-size: 0.875rem;
+          font-weight: 600;
+          color: #0f172a;
+        }
+      }
+
+      .selected-ports-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+      }
+
+      .selected-port-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        background-color: #0a6cbc;
+        color: white;
+        border-radius: 9999px;
+        padding: 0.25rem 0.5rem 0.25rem 0.75rem;
+        font-size: 0.75rem;
+        font-weight: 500;
+      }
+
+      .port-order {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 1.25rem;
+        height: 1.25rem;
+        background-color: rgba(255, 255, 255, 0.2);
+        border-radius: 50%;
+        font-size: 0.625rem;
+        font-weight: 600;
+      }
+
+      .remove-port-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: transparent;
+        border: none;
+        color: rgba(255, 255, 255, 0.8);
+        cursor: pointer;
+        padding: 0;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        transition: background-color 150ms ease;
+
+        &:hover {
+          background-color: rgba(255, 255, 255, 0.2);
+          color: white;
+        }
+      }
+
+      .route-visualization-section {
+        padding: 1.5rem;
+        border-top: 1px solid #e2e8f0;
+
+        h3 {
+          margin: 0 0 1rem 0;
+          font-size: 1rem;
+          font-weight: 600;
+          color: #0f172a;
+        }
+      }
+
+      .route-summary {
+        background-color: #f8fafc;
+        border-radius: 0.375rem;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        border: 1px solid #e2e8f0;
+      }
+
+      .summary-item {
+        margin-bottom: 0.5rem;
+        font-size: 0.875rem;
+
+        &:last-child {
+          margin-bottom: 0;
+        }
+
+        strong {
+          color: #0f172a;
+        }
+      }
+
+      .action-buttons {
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.75rem;
+        padding: 1.5rem;
+        border-top: 1px solid #e2e8f0;
+      }
+
+      .btn-outline {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        background-color: transparent;
+        color: #475569;
+        border: 1px solid #cbd5e1;
+        border-radius: 0.375rem;
+        padding: 0.5rem 1rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 150ms ease;
+
+        &:hover {
+          background-color: #f1f5f9;
+          border-color: #94a3b8;
+        }
+
+        svg {
+          flex-shrink: 0;
+        }
+      }
+
+      .btn-secondary {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        background-color: #f1f5f9;
+        color: #0f172a;
+        border: 1px solid #cbd5e1;
+        border-radius: 0.375rem;
+        padding: 0.5rem 1rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 150ms ease;
+
+        &:hover {
+          background-color: #e2e8f0;
+        }
+
+        &:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+
+        svg {
+          flex-shrink: 0;
+        }
+      }
+
+      .btn-primary {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        background-color: #0a6cbc;
+        color: white;
+        border: none;
+        border-radius: 0.375rem;
+        padding: 0.5rem 1rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background-color 150ms ease;
+
+        &:hover {
+          background-color: #084e88;
+        }
+
+        &:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+
+        svg {
+          flex-shrink: 0;
+        }
+      }
+
+      .mr-2 {
+        margin-right: 0.25rem;
+      }
+
+      /* Estilos para el modal de confirmación */
+      .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+      }
+
+      .modal-container {
+        background-color: white;
+        border-radius: 0.5rem;
+        width: 90%;
+        max-width: 500px;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        overflow: hidden;
+      }
+
+      .modal-header {
+        display: flex;
+        align-items: center;
+        padding: 1.25rem 1.5rem;
+        border-bottom: 1px solid #e2e8f0;
+        gap: 0.75rem;
+      }
+
+      .modal-header.success {
+        background-color: #d1fae5;
+        color: #065f46;
+      }
+
+      .modal-header.error {
+        background-color: #fee2e2;
+        color: #b91c1c;
+      }
+
+      .modal-header svg {
+        flex-shrink: 0;
+      }
+
+      .modal-header h3 {
         margin: 0;
         font-size: 1.25rem;
         font-weight: 600;
-        color: #0f172a;
-      }
-    }
-
-    .port-selector-content {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 1.5rem;
-      padding: 1.5rem;
-
-      @media (max-width: 768px) {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    .port-selection-section {
-      display: flex;
-      flex-direction: column;
-      gap: 1rem;
-
-      h3 {
-        margin: 0;
-        font-size: 1rem;
-        font-weight: 600;
-        color: #0f172a;
-      }
-    }
-
-    .search-container {
-      position: relative;
-    }
-
-    .search-input-wrapper {
-      position: relative;
-    }
-
-    .search-input {
-      width: 100%;
-      padding: 0.5rem 2.5rem 0.5rem 0.75rem;
-      border: 1px solid #cbd5e1;
-      border-radius: 0.375rem;
-      font-size: 0.875rem;
-      outline: none;
-      transition: border-color 150ms ease;
-
-      &:focus {
-        border-color: #0a6cbc;
-        box-shadow: 0 0 0 1px rgba(10, 108, 188, 0.2);
-      }
-    }
-
-    .search-icon {
-      position: absolute;
-      right: 0.75rem;
-      top: 50%;
-      transform: translateY(-50%);
-      color: #64748b;
-      pointer-events: none;
-    }
-
-    .search-clear-icon {
-      position: absolute;
-      right: 0.75rem;
-      top: 50%;
-      transform: translateY(-50%);
-      color: #64748b;
-      cursor: pointer;
-      z-index: 1;
-
-      &:hover {
-        color: #475569;
-      }
-    }
-
-    .port-list-container {
-      display: flex;
-      flex-direction: column;
-      border: 1px solid #e2e8f0;
-      border-radius: 0.375rem;
-      overflow: hidden;
-      height: 300px;
-    }
-
-    .port-list-header {
-      display: grid;
-      grid-template-columns: 2fr 1fr;
-      padding: 0.5rem 1rem;
-      background-color: #f1f5f9;
-      border-bottom: 1px solid #e2e8f0;
-      font-weight: 600;
-      font-size: 0.75rem;
-      color: #475569;
-      text-transform: uppercase;
-    }
-
-    .port-list {
-      flex: 1;
-      overflow-y: auto;
-      padding: 0.5rem 0;
-    }
-
-    .port-item {
-      display: grid;
-      grid-template-columns: 2fr 1fr;
-      padding: 0.5rem 1rem;
-      cursor: pointer;
-      transition: background-color 150ms ease;
-
-      &:hover:not(.disabled) {
-        background-color: #f8fafc;
       }
 
-      &.selected {
-        background-color: rgba(10, 108, 188, 0.1);
+      .modal-body {
+        padding: 1.5rem;
+        color: #1e293b;
       }
 
-      &.disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-      }
-    }
-
-    .port-name {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      font-weight: 500;
-    }
-
-    .port-icon {
-      color: #0a6cbc;
-    }
-
-    .port-continent {
-      color: #64748b;
-      font-size: 0.875rem;
-    }
-
-    .loading-container {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100%;
-      gap: 1rem;
-      color: #64748b;
-    }
-
-    .loading-spinner {
-      width: 2rem;
-      height: 2rem;
-      border: 2px solid rgba(10, 108, 188, 0.2);
-      border-top-color: #0a6cbc;
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-    }
-
-    @keyframes spin {
-      to {
-        transform: rotate(360deg);
-      }
-    }
-
-    .empty-state {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100%;
-      gap: 1rem;
-      color: #64748b;
-      padding: 1rem;
-      text-align: center;
-    }
-
-    .empty-icon {
-      color: #94a3b8;
-    }
-
-    .intermediate-ports-section {
-      padding: 1.5rem;
-      border-top: 1px solid #e2e8f0;
-
-      h3 {
-        margin: 0 0 0.5rem 0;
-        font-size: 1rem;
-        font-weight: 600;
-        color: #0f172a;
+      .modal-footer {
+        display: flex;
+        justify-content: flex-end;
+        padding: 1rem 1.5rem;
+        border-top: 1px solid #e2e8f0;
       }
 
-      .section-description {
-        margin: 0 0 1rem 0;
-        font-size: 0.875rem;
-        color: #64748b;
-      }
-    }
-
-    .intermediate-ports-container {
-      display: flex;
-      flex-direction: column;
-      gap: 1rem;
-      margin-top: 1rem;
-    }
-
-    .selected-ports {
-      background-color: #f8fafc;
-      border-radius: 0.375rem;
-      padding: 1rem;
-      margin-bottom: 1rem;
-      border: 1px solid #e2e8f0;
-
-      h4 {
-        margin: 0 0 0.5rem 0;
-        font-size: 0.875rem;
-        font-weight: 600;
-        color: #0f172a;
-      }
-    }
-
-    .selected-ports-list {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.5rem;
-    }
-
-    .selected-port-item {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      background-color: #0a6cbc;
-      color: white;
-      border-radius: 9999px;
-      padding: 0.25rem 0.5rem 0.25rem 0.75rem;
-      font-size: 0.75rem;
-      font-weight: 500;
-    }
-
-    .port-order {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 1.25rem;
-      height: 1.25rem;
-      background-color: rgba(255, 255, 255, 0.2);
-      border-radius: 50%;
-      font-size: 0.625rem;
-      font-weight: 600;
-    }
-
-    .remove-port-btn {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background-color: transparent;
-      border: none;
-      color: rgba(255, 255, 255, 0.8);
-      cursor: pointer;
-      padding: 0;
-      width: 16px;
-      height: 16px;
-      border-radius: 50%;
-      transition: background-color 150ms ease;
-
-      &:hover {
-        background-color: rgba(255, 255, 255, 0.2);
+      .btn-success {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        background-color: #10b981;
         color: white;
+        border: none;
+        border-radius: 0.375rem;
+        padding: 0.5rem 1rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background-color 150ms ease;
+
+        &:hover {
+          background-color: #059669;
+        }
+
+        &:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+
+        svg {
+          flex-shrink: 0;
+        }
       }
-    }
-
-    .route-visualization-section {
-      padding: 1.5rem;
-      border-top: 1px solid #e2e8f0;
-
-      h3 {
-        margin: 0 0 1rem 0;
-        font-size: 1rem;
-        font-weight: 600;
-        color: #0f172a;
-      }
-    }
-
-    .route-summary {
-      background-color: #f8fafc;
-      border-radius: 0.375rem;
-      padding: 1rem;
-      margin-bottom: 1rem;
-      border: 1px solid #e2e8f0;
-    }
-
-    .summary-item {
-      margin-bottom: 0.5rem;
-      font-size: 0.875rem;
-
-      &:last-child {
-        margin-bottom: 0;
-      }
-
-      strong {
-        color: #0f172a;
-      }
-    }
-
-    .action-buttons {
-      display: flex;
-      justify-content: flex-end;
-      gap: 0.75rem;
-      padding: 1.5rem;
-      border-top: 1px solid #e2e8f0;
-    }
-
-    .btn-outline {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.25rem;
-      background-color: transparent;
-      color: #475569;
-      border: 1px solid #cbd5e1;
-      border-radius: 0.375rem;
-      padding: 0.5rem 1rem;
-      font-weight: 500;
-      cursor: pointer;
-      transition: all 150ms ease;
-
-      &:hover {
-        background-color: #f1f5f9;
-        border-color: #94a3b8;
-      }
-
-      svg {
-        flex-shrink: 0;
-      }
-    }
-
-    .btn-secondary {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.25rem;
-      background-color: #f1f5f9;
-      color: #0f172a;
-      border: 1px solid #cbd5e1;
-      border-radius: 0.375rem;
-      padding: 0.5rem 1rem;
-      font-weight: 500;
-      cursor: pointer;
-      transition: all 150ms ease;
-
-      &:hover {
-        background-color: #e2e8f0;
-      }
-
-      &:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-      }
-
-      svg {
-        flex-shrink: 0;
-      }
-    }
-
-    .btn-primary {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.25rem;
-      background-color: #0a6cbc;
-      color: white;
-      border: none;
-      border-radius: 0.375rem;
-      padding: 0.5rem 1rem;
-      font-weight: 500;
-      cursor: pointer;
-      transition: background-color 150ms ease;
-
-      &:hover {
-        background-color: #084e88;
-      }
-
-      &:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-      }
-
-      svg {
-        flex-shrink: 0;
-      }
-    }
-
-    .mr-2 {
-      margin-right: 0.25rem;
-    }
-  `,
+    `,
   ],
 })
 export class PortSelectorComponent implements OnInit {
-  showIncotermForm = false;
+  @Input() preselectedOrigin: string | null = null
+  @Input() preselectedDestination: string | null = null
+  @Input() autoVisualize = false
+
+  showIncotermForm = false
   @Output() cancel = new EventEmitter<void>()
 
   // Puertos
@@ -914,30 +1075,34 @@ export class PortSelectorComponent implements OnInit {
   // Estados de carga
   loadingOriginPorts = true
   loadingDestinationPorts = true
+  portsLoaded = false
 
   // Visualización de ruta
   showRouteVisualization = false
   routeData: RouteCalculationResource | null = null
 
-  // Añadir una propiedad para los puertos intermedios
+  // Puertos intermedios
   selectedIntermediatePorts: Port[] = []
-
-  // Añadir propiedades y métodos para la búsqueda de puertos intermedios
   intermediateSearchTerm = ""
   filteredIntermediatePorts: Port[] = []
   loadingIntermediatePorts = true
+
+  // Modal y reportes
+  routeCreated = false
+  showConfirmationModal = false
+  modalTitle = ""
+  modalMessage = ""
+  modalType: "success" | "error" = "success"
 
   constructor(
     private portService: PortService,
     private routeService: RouteService,
   ) {}
 
-  // Modificar el método ngOnInit para inicializar los puertos intermedios
   ngOnInit(): void {
     this.loadPorts()
   }
 
-  // Modificar el método loadPorts para incluir los puertos intermedios
   loadPorts(): void {
     this.loadingOriginPorts = true
     this.loadingDestinationPorts = true
@@ -952,14 +1117,53 @@ export class PortSelectorComponent implements OnInit {
         this.loadingOriginPorts = false
         this.loadingDestinationPorts = false
         this.loadingIntermediatePorts = false
+        this.portsLoaded = true
+
+        // Manejar preselecciones
+        this.handlePreselectedPorts()
       },
       error: (error) => {
         console.error("Error al cargar puertos:", error)
         this.loadingOriginPorts = false
         this.loadingDestinationPorts = false
         this.loadingIntermediatePorts = false
+        this.portsLoaded = true
       },
     })
+  }
+
+  private handlePreselectedPorts(): void {
+    if (this.preselectedOrigin && this.preselectedDestination) {
+      console.log("Manejando puertos preseleccionados:", this.preselectedOrigin, this.preselectedDestination)
+
+      // Buscar y seleccionar puerto de origen
+      const originPort = this.allPorts.find((port) =>
+        port.name.toLowerCase().includes(this.preselectedOrigin!.toLowerCase()),
+      )
+
+      // Buscar y seleccionar puerto de destino
+      const destinationPort = this.allPorts.find((port) =>
+        port.name.toLowerCase().includes(this.preselectedDestination!.toLowerCase()),
+      )
+
+      if (originPort && destinationPort) {
+        this.selectedOriginPort = originPort
+        this.selectedDestinationPort = destinationPort
+
+        console.log("Puertos encontrados y seleccionados:", originPort.name, destinationPort.name)
+
+        // Si autoVisualize está activado, visualizar automáticamente
+        if (this.autoVisualize) {
+          setTimeout(() => {
+            this.visualizeRoute()
+          }, 500) // Pequeño delay para que se vea la transición
+        }
+      } else {
+        console.warn("No se pudieron encontrar los puertos preseleccionados")
+        if (!originPort) console.warn("Puerto de origen no encontrado:", this.preselectedOrigin)
+        if (!destinationPort) console.warn("Puerto de destino no encontrado:", this.preselectedDestination)
+      }
+    }
   }
 
   searchOriginPorts(): void {
@@ -998,7 +1202,6 @@ export class PortSelectorComponent implements OnInit {
 
   selectOriginPort(port: Port): void {
     this.selectedOriginPort = port
-    // Si ya tenemos un puerto de destino seleccionado, ocultamos la visualización de ruta
     if (this.showRouteVisualization) {
       this.showRouteVisualization = false
       this.routeData = null
@@ -1007,26 +1210,22 @@ export class PortSelectorComponent implements OnInit {
 
   selectDestinationPort(port: Port): void {
     this.selectedDestinationPort = port
-    // Si ya tenemos un puerto de origen seleccionado, ocultamos la visualización de ruta
     if (this.showRouteVisualization) {
       this.showRouteVisualization = false
       this.routeData = null
     }
   }
 
-  // Método modificado para incluir puertos intermedios en el cálculo de ruta
   visualizeRoute(): void {
     if (!this.selectedOriginPort || !this.selectedDestinationPort) {
       return
     }
 
-    // Preparar los nombres de los puertos intermedios
     const intermediatePortNames = this.selectedIntermediatePorts.map((port) => port.name)
 
     console.log("Calculando ruta desde:", this.selectedOriginPort.name, "hasta:", this.selectedDestinationPort.name)
     console.log("Puertos intermedios:", intermediatePortNames)
 
-    // Llamar al servicio para calcular la ruta óptima incluyendo puertos intermedios
     this.routeService
       .calculateOptimalRoute(this.selectedOriginPort.name, this.selectedDestinationPort.name, intermediatePortNames)
       .subscribe({
@@ -1037,7 +1236,6 @@ export class PortSelectorComponent implements OnInit {
         },
         error: (err: Error) => {
           console.error("Error al calcular la ruta:", err)
-          // Crear datos de ruta simulados para mostrar una ruta básica
           this.routeData = this.createSimulatedRouteData(
             this.selectedOriginPort?.coordinates,
             this.selectedDestinationPort?.coordinates,
@@ -1047,24 +1245,18 @@ export class PortSelectorComponent implements OnInit {
       })
   }
 
-  // Añadir un método para seleccionar puertos intermedios
   selectIntermediatePort(port: Port): void {
-    // Verificar si el puerto ya está seleccionado
     const index = this.selectedIntermediatePorts.findIndex((p) => p.id === port.id)
 
-    // Si ya está seleccionado, lo quitamos
     if (index !== -1) {
       this.selectedIntermediatePorts.splice(index, 1)
-    }
-    // Si no está seleccionado y no es el origen ni el destino, lo añadimos
-    else if (
+    } else if (
       (!this.selectedOriginPort || port.id !== this.selectedOriginPort.id) &&
       (!this.selectedDestinationPort || port.id !== this.selectedDestinationPort.id)
     ) {
       this.selectedIntermediatePorts.push(port)
     }
 
-    // Si ya tenemos una visualización de ruta, la ocultamos para que se actualice
     if (this.showRouteVisualization) {
       this.showRouteVisualization = false
       this.routeData = null
@@ -1082,7 +1274,6 @@ export class PortSelectorComponent implements OnInit {
     )
   }
 
-  // Añadir estos métodos para manejar los puertos intermedios
   searchIntermediatePorts(): void {
     if (!this.intermediateSearchTerm.trim()) {
       this.filteredIntermediatePorts = [...this.allPorts]
@@ -1112,29 +1303,23 @@ export class PortSelectorComponent implements OnInit {
       }
     }
 
-    // Crear nombres de puertos para la ruta óptima
     const optimalRoute = [this.selectedOriginPort.name]
 
-    // Añadir puertos intermedios si existen
     if (this.selectedIntermediatePorts.length > 0) {
       this.selectedIntermediatePorts.forEach((port) => {
         optimalRoute.push(port.name)
       })
     }
 
-    // Añadir puerto de destino
     optimalRoute.push(this.selectedDestinationPort.name)
 
-    // Crear el mapping de coordenadas
     const coordinatesMapping: { [key: string]: { latitude: number; longitude: number } } = {}
 
-    // Añadir coordenadas del puerto de origen
     coordinatesMapping[this.selectedOriginPort.name] = {
       latitude: originCoords.latitude,
       longitude: originCoords.longitude,
     }
 
-    // Añadir coordenadas de puertos intermedios
     this.selectedIntermediatePorts.forEach((port) => {
       if (port.coordinates) {
         coordinatesMapping[port.name] = {
@@ -1144,13 +1329,11 @@ export class PortSelectorComponent implements OnInit {
       }
     })
 
-    // Añadir coordenadas del puerto de destino
     coordinatesMapping[this.selectedDestinationPort.name] = {
       latitude: destCoords.latitude,
       longitude: destCoords.longitude,
     }
 
-    // Calcular distancia simulada (aproximada usando distancia euclidiana)
     const totalDistance = this.calculateApproximateDistance(originCoords, destCoords)
 
     return {
@@ -1164,9 +1347,8 @@ export class PortSelectorComponent implements OnInit {
     }
   }
 
-  // Añadir método auxiliar para calcular distancia aproximada
   private calculateApproximateDistance(coord1: any, coord2: any): number {
-    const R = 3440.065 // Radio de la Tierra en millas náuticas
+    const R = 3440.065
     const dLat = this.toRadians(coord2.latitude - coord1.latitude)
     const dLon = this.toRadians(coord2.longitude - coord1.longitude)
     const a =
@@ -1179,7 +1361,6 @@ export class PortSelectorComponent implements OnInit {
     return R * c
   }
 
-  // Añadir método auxiliar para convertir grados a radianes
   private toRadians(degrees: number): number {
     return degrees * (Math.PI / 180)
   }
@@ -1189,38 +1370,61 @@ export class PortSelectorComponent implements OnInit {
       return
     }
 
-    // Si no tenemos datos de ruta, primero calculamos la ruta
     if (!this.routeData) {
       this.visualizeRoute()
       return
     }
 
-    // Crear un objeto con los datos de la ruta
-    const routeData = {
-      name: `${this.selectedOriginPort.name} a ${this.selectedDestinationPort.name}`,
-      originPortId: this.selectedOriginPort.id,
-      destinationPortId: this.selectedDestinationPort.id,
-      departureDate: new Date().toISOString(), // Fecha actual como fecha de salida
-      vessels: 1, // Valor por defecto
-      status: "Planificada",
-      intermediatePorts: this.selectedIntermediatePorts.map((port) => port.id),
-      routeData: this.routeData,
+    setTimeout(() => {
+      console.log("Ruta creada con éxito")
+      this.routeCreated = true
+      this.showModal(
+        "success",
+        "Ruta Creada",
+        "La ruta ha sido creada con éxito. Ahora puede generar un reporte detallado.",
+      )
+    }, 500)
+  }
+
+  createReport(): void {
+    if (!this.routeData || !this.routeCreated || !this.selectedOriginPort || !this.selectedDestinationPort) {
+      return
     }
 
-    // Crear un reporte basado en la ruta
-    this.routeService.createRouteReport(routeData).subscribe({
+    const reportData = {
+      name: `Reporte: ${this.selectedOriginPort.name} a ${this.selectedDestinationPort.name}`,
+      originPortId: this.selectedOriginPort.id,
+      destinationPortId: this.selectedDestinationPort.id,
+      departureDate: new Date().toISOString(),
+      routeData: this.routeData,
+      intermediatePorts: this.selectedIntermediatePorts.map((port) => port.id),
+    }
+
+    this.routeService.createRouteReport(reportData).subscribe({
       next: (response) => {
-        console.log("Ruta y reporte creados con éxito:", response)
-        alert(
-          "Ruta creada con éxito. Se ha generado un informe que puede consultar en la sección de Informes de Envíos.",
+        console.log("Reporte creado con éxito:", response)
+        this.showModal(
+          "success",
+          "Reporte Generado",
+          "El reporte ha sido generado con éxito. Puede consultarlo en la sección de Informes de Envíos.",
         )
-        this.onCancel() // Cerrar el selector de puertos
       },
       error: (error) => {
-        console.error("Error al crear la ruta:", error)
-        alert("Error al crear la ruta: " + error.message)
+        console.error("Error al crear el reporte:", error)
+        this.showModal("error", "Error", "No se pudo generar el reporte: " + (error.message || "Error desconocido"))
       },
     })
+  }
+
+  showModal(type: "success" | "error", title: string, message: string): void {
+    this.modalType = type
+    this.modalTitle = title
+    this.modalMessage = message
+    this.showConfirmationModal = true
+  }
+
+  closeModal(): void {
+    this.showConfirmationModal = false
   }
 
   getIntermediatePortNames(): string {

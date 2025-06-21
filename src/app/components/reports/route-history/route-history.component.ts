@@ -17,7 +17,6 @@ import { HeaderComponent } from "../../shared/header/header.component"
       <div class="main-content">
         <app-header
           pageTitle="Historial de Rutas"
-          [breadcrumbs]="[{label: 'Historial de Rutas'}]"
           [notificationCount]="2"
         >
           <button class="btn-primary">
