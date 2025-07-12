@@ -1,23 +1,29 @@
 import { Injectable } from "@angular/core"
-import { CanActivate, Router, UrlTree } from "@angular/router" // Regular import for Router and UrlTree
-import { Observable } from "rxjs" // Regular import for Observable
-import  { AuthService } from "../services/auth.service" // Regular import for AuthService
+import { Router, CanActivateFn } from "@angular/router"
+import { AuthService } from "../services/auth.service"
 
 @Injectable({
   providedIn: "root",
 })
-export class AuthGuard implements CanActivate {
+export class AuthGuard {
   constructor(
     private authService: AuthService,
     private router: Router,
   ) {}
 
-  canActivate(): Observable<boolean | UrlTree> | Promise<boolean | UrlTree> | boolean | UrlTree {
-    if (this.authService.isAuthenticated()) {
+  canActivate: CanActivateFn = (route, state) => {
+    if (this.authService.isLoggedIn) {
+      // Verificar si el token ha expirado
+      if (this.authService.isTokenExpired()) {
+        this.authService.logout()
+        this.router.navigate(["/login"], { queryParams: { returnUrl: state.url } })
+        return false
+      }
       return true
     }
 
-    // Redirect to login page
-    return this.router.createUrlTree(["/login"])
+    // No está autenticado, redirigir al login
+    this.router.navigate(["/login"], { queryParams: { returnUrl: state.url } })
+    return false
   }
 }
