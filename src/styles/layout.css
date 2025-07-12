@@ -1,0 +1,143 @@
+/* Layout System Variables */
+:root {
+  --layout-spacing-xs: 0.25rem;
+  --layout-spacing-sm: 0.5rem;
+  --layout-spacing-md: 1rem;
+  --layout-spacing-lg: 1.5rem;
+  --layout-spacing-xl: 2rem;
+  --layout-spacing-2xl: 3rem;
+}
+
+/* Compact Layout */
+.layout-compact {
+  --layout-spacing-xs: 0.125rem;
+  --layout-spacing-sm: 0.25rem;
+  --layout-spacing-md: 0.5rem;
+  --layout-spacing-lg: 0.75rem;
+  --layout-spacing-xl: 1rem;
+  --layout-spacing-2xl: 1.5rem;
+}
+
+.layout-compact .card {
+  padding: var(--layout-spacing-md);
+}
+
+.layout-compact .dashboard-grid {
+  gap: var(--layout-spacing-md);
+}
+
+.layout-compact .routes-grid {
+  gap: var(--layout-spacing-sm);
+}
+
+.layout-compact .btn {
+  padding: var(--layout-spacing-xs) var(--layout-spacing-md);
+  font-size: 0.875rem;
+}
+
+.layout-compact h1 {
+  font-size: 1.5rem;
+  margin-bottom: var(--layout-spacing-sm);
+}
+
+.layout-compact h2 {
+  font-size: 1.25rem;
+  margin-bottom: var(--layout-spacing-sm);
+}
+
+.layout-compact h3 {
+  font-size: 1.125rem;
+  margin-bottom: var(--layout-spacing-xs);
+}
+
+/* Comfortable Layout (Default) */
+.layout-comfortable {
+  --layout-spacing-xs: 0.25rem;
+  --layout-spacing-sm: 0.5rem;
+  --layout-spacing-md: 1rem;
+  --layout-spacing-lg: 1.5rem;
+  --layout-spacing-xl: 2rem;
+  --layout-spacing-2xl: 3rem;
+}
+
+/* Spacious Layout */
+.layout-spacious {
+  --layout-spacing-xs: 0.5rem;
+  --layout-spacing-sm: 0.75rem;
+  --layout-spacing-md: 1.5rem;
+  --layout-spacing-lg: 2rem;
+  --layout-spacing-xl: 3rem;
+  --layout-spacing-2xl: 4rem;
+}
+
+.layout-spacious .card {
+  padding: var(--layout-spacing-xl);
+}
+
+.layout-spacious .dashboard-grid {
+  gap: var(--layout-spacing-xl);
+}
+
+.layout-spacious .routes-grid {
+  gap: var(--layout-spacing-lg);
+}
+
+.layout-spacious .btn {
+  padding: var(--layout-spacing-md) var(--layout-spacing-xl);
+  font-size: 1.125rem;
+}
+
+.layout-spacious h1 {
+  font-size: 3rem;
+  margin-bottom: var(--layout-spacing-lg);
+}
+
+.layout-spacious h2 {
+  font-size: 2rem;
+  margin-bottom: var(--layout-spacing-lg);
+}
+
+.layout-spacious h3 {
+  font-size: 1.5rem;
+  margin-bottom: var(--layout-spacing-md);
+}
+
+/* Sidebar Collapsed State */
+.sidebar-collapsed .main-content {
+  margin-left: 80px;
+}
+
+.sidebar-collapsed .header {
+  left: 80px;
+}
+
+/* Font Size Adjustments */
+:root {
+  --base-font-size: 16px;
+}
+
+html {
+  font-size: var(--base-font-size);
+}
+
+/* Animation Control */
+.no-animations * {
+  transition: none !important;
+  animation: none !important;
+}
+
+/* Responsive Layout Adjustments */
+@media (max-width: 768px) {
+  .layout-spacious {
+    --layout-spacing-md: 1rem;
+    --layout-spacing-lg: 1.5rem;
+    --layout-spacing-xl: 2rem;
+  }
+
+  .layout-compact .btn,
+  .layout-comfortable .btn,
+  .layout-spacious .btn {
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+  }
+}

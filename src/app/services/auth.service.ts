@@ -1,89 +1,187 @@
 import { Injectable } from "@angular/core"
-import { type Observable, of, throwError } from "rxjs"
+import { HttpClient } from "@angular/common/http"
+import { BehaviorSubject, type Observable, throwError } from "rxjs"
+import { catchError, map } from "rxjs/operators"
+import { Router } from "@angular/router"
+import { environment } from "../../environments/environment"
 
-interface User {
-  id: number
+export interface User {
+  id: string
   username: string
-  name: string
-  email: string
-  role: string
+  name?: string
+  email?: string
+  role?: string
+  roles?: string[]
+  token?: string
+}
+
+export interface LoginRequest {
+  username: string
+  password: string
+}
+
+export interface LoginResponse {
+  id: string
+  username: string
+  token: string
+}
+
+export interface SignUpRequest {
+  username: string
+  password: string
+  roles: string[]
 }
 
 @Injectable({
   providedIn: "root",
 })
 export class AuthService {
-  private currentUser: User | null = null
-  private readonly storageKey = "maritime_auth_user"
-  private readonly tokenKey = "maritime_auth_token"
+  // Cambiamos la URL para que coincida con el backend
+  private apiUrl = `${environment.apiUrl}/authentication`
+  private tokenKey = "maritime_auth_token"
+  private userKey = "maritime_user"
+  private currentUserSubject: BehaviorSubject<User | null>
+  public currentUser: Observable<User | null>
 
-  constructor() {
-    this.loadUserFromStorage()
+  constructor(
+    private http: HttpClient,
+    private router: Router,
+  ) {
+    // Intentar recuperar el usuario del almacenamiento local al iniciar
+    const storedUser = localStorage.getItem(this.userKey)
+    this.currentUserSubject = new BehaviorSubject<User | null>(storedUser ? JSON.parse(storedUser) : null)
+    this.currentUser = this.currentUserSubject.asObservable()
   }
 
-  login(username: string, password: string, rememberMe: boolean): Observable<User> {
-    // For demo purposes, we'll accept any username/password combination
-    // In a real app, this would make an HTTP request to your backend
-
-    // Simulate authentication failure for specific cases
-    if (password === "wrongpassword") {
-      return throwError(() => new Error("Invalid username or password"))
-    }
-
-    // Mock successful login
-    const user: User = {
-      id: 1,
-      username,
-      name: "Maritime User",
-      email: `${username}@example.com`,
-      role: "user",
-    }
-
-    // Store user info
-    this.currentUser = user
-
-    // Store in localStorage or sessionStorage based on rememberMe
-    if (rememberMe) {
-      localStorage.setItem(this.storageKey, JSON.stringify(user))
-      localStorage.setItem(this.tokenKey, "mock-jwt-token-" + Date.now())
-    } else {
-      sessionStorage.setItem(this.storageKey, JSON.stringify(user))
-      sessionStorage.setItem(this.tokenKey, "mock-jwt-token-" + Date.now())
-    }
-
-    return of(user)
+  public get currentUserValue(): User | null {
+    return this.currentUserSubject.value
   }
 
-  logout(): Observable<boolean> {
-    this.currentUser = null
-    localStorage.removeItem(this.storageKey)
+  public get isLoggedIn(): boolean {
+    return !!this.currentUserValue && !!this.getToken()
+  }
+
+  // Update the login method to match the backend's expected format and response
+  login(credentials: LoginRequest): Observable<User> {
+    // Calling the endpoint that matches the backend's AuthenticationController
+    return this.http.post<LoginResponse>(`${this.apiUrl}/sign-in`, credentials).pipe(
+      map((response) => {
+        // Extract the user and token from the response
+        const user: User = {
+          id: response.id,
+          username: response.username,
+          name: response.username, // If the backend doesn't provide a name, use the username
+          role: "ROLE_USER", // Assign a default role
+          token: response.token,
+        }
+
+        // Save token and user
+        this.setToken(response.token)
+        this.setUser(user)
+        this.currentUserSubject.next(user)
+        return user
+      }),
+      catchError((error) => {
+        console.error("Error durante el inicio de sesión:", error)
+        let errorMessage = "Error de inicio de sesión"
+
+        if (error.error && error.error.message) {
+          errorMessage = error.error.message
+        } else if (error.status === 401) {
+          errorMessage = "Credenciales inválidas"
+        } else if (error.status === 403) {
+          errorMessage = "No tiene permisos para acceder"
+        } else if (error.status === 0) {
+          errorMessage = "No se pudo conectar al servidor. Verifique su conexión a internet."
+        }
+
+        return throwError(() => new Error(errorMessage))
+      }),
+    )
+  }
+
+  // Modificar el método register para manejar mejor los errores
+  register(signUpRequest: SignUpRequest): Observable<User> {
+    // No need to modify the roles - we're now sending the exact enum values from the form
+    console.log("Sending to backend:", signUpRequest)
+
+    // Llamada al endpoint de registro del backend
+    return this.http.post<User>(`${this.apiUrl}/sign-up`, signUpRequest).pipe(
+      catchError((error) => {
+        console.error("Error durante el registro:", error)
+        let errorMessage = "Error de registro"
+
+        if (error.error && error.error.message) {
+          errorMessage = error.error.message
+        } else if (error.status === 400) {
+          errorMessage = "Datos de registro inválidos"
+        } else if (error.status === 409) {
+          errorMessage = "El nombre de usuario ya existe"
+        } else if (error.status === 401) {
+          errorMessage = "No se pudo registrar el usuario. El endpoint requiere autenticación."
+        } else if (error.status === 500) {
+          errorMessage =
+            error.error && error.error.message
+              ? error.error.message
+              : "Error interno del servidor. Por favor contacte al administrador."
+        } else if (error.status === 0) {
+          errorMessage = "No se pudo conectar al servidor. Verifique su conexión a internet."
+        }
+
+        return throwError(() => new Error(errorMessage))
+      }),
+    )
+  }
+
+  logout(): void {
+    // Eliminar token y usuario del almacenamiento
     localStorage.removeItem(this.tokenKey)
-    sessionStorage.removeItem(this.storageKey)
-    sessionStorage.removeItem(this.tokenKey)
-    return of(true)
-  }
-
-  isAuthenticated(): boolean {
-    return !!this.currentUser
-  }
-
-  getCurrentUser(): User | null {
-    return this.currentUser
+    localStorage.removeItem(this.userKey)
+    this.currentUserSubject.next(null)
+    this.router.navigate(["/login"])
   }
 
   getToken(): string | null {
-    return localStorage.getItem(this.tokenKey) || sessionStorage.getItem(this.tokenKey)
+    return localStorage.getItem(this.tokenKey)
   }
 
-  private loadUserFromStorage(): void {
-    const storedUser = localStorage.getItem(this.storageKey) || sessionStorage.getItem(this.storageKey)
-    if (storedUser) {
-      try {
-        this.currentUser = JSON.parse(storedUser)
-      } catch (e) {
-        console.error("Error parsing stored user", e)
-        this.currentUser = null
+  private setToken(token: string): void {
+    localStorage.setItem(this.tokenKey, token)
+  }
+
+  private setUser(user: User): void {
+    localStorage.setItem(this.userKey, JSON.stringify(user))
+  }
+
+  private getRoleFromRoles(roles: string[]): string {
+    // Prioridad de roles (de mayor a menor)
+    const rolePriority = ["ROLE_ADMIN", "ROLE_INSTRUCTOR", "ROLE_USER"]
+
+    // Buscar el rol de mayor prioridad
+    for (const role of rolePriority) {
+      if (roles.includes(role)) {
+        return this.formatRoleName(role)
       }
     }
+
+    // Si no hay coincidencias, devolver el primer rol o "Usuario" por defecto
+    return roles.length > 0 ? this.formatRoleName(roles[0]) : "Usuario"
+  }
+
+  // Método para formatear el nombre del rol (primera letra mayúscula, resto minúsculas)
+  private formatRoleName(role: string): string {
+    // Remove the ROLE_ prefix and capitalize the first letter
+    const roleName = role.replace("ROLE_", "")
+    return roleName.charAt(0).toUpperCase() + roleName.slice(1).toLowerCase()
+  }
+
+  // Verificar si el token ha expirado
+  isTokenExpired(): boolean {
+    const token = this.getToken()
+    if (!token) return true
+
+    // Si el backend usa JWT, podríamos decodificar el token y verificar su fecha de expiración
+    // Por ahora, asumimos que el token es válido
+    return false
   }
 }
