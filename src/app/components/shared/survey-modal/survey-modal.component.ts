@@ -147,8 +147,7 @@ interface SurveyQuestion {
       }
 
       .modal-container {
-        background-color: #2d3748; /* Fondo oscuro para el modal */
-        color: #f7fafc; /* Color de texto claro por defecto */
+        background-color: white;
         border-radius: 1rem;
         box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
         width: 100%;
@@ -163,15 +162,15 @@ interface SurveyQuestion {
         align-items: center;
         justify-content: space-between;
         padding: 1.5rem 2rem;
-        border-bottom: 1px solid #4a5568; /* Borde más claro */
-        background-color: #1a202c; /* Fondo de cabecera oscuro */
+        border-bottom: 1px solid #e2e8f0;
+        background-color: #f8fafc;
       }
 
       .survey-header h2 {
         margin: 0;
         font-size: 1.5rem;
         font-weight: 700;
-        color: #e2e8f0; /* Texto de cabecera claro */
+        color: #0f172a;
       }
 
       .close-btn {
@@ -182,27 +181,27 @@ interface SurveyQuestion {
         height: 32px;
         border: none;
         background: none;
-        color: #a0aec0; /* Color de icono claro */
+        color: #6b7280;
         cursor: pointer;
         border-radius: 0.375rem;
         transition: all 150ms ease;
       }
 
       .close-btn:hover {
-        background-color: #4a5568; /* Fondo de hover más claro */
-        color: #f7fafc; /* Texto de hover más claro */
+        background-color: #f3f4f6;
+        color: #374151;
       }
 
       .survey-progress {
         padding: 1rem 2rem;
-        background-color: #1a202c; /* Fondo de progreso oscuro */
-        border-bottom: 1px solid #4a5568; /* Borde más claro */
+        background-color: #f8fafc;
+        border-bottom: 1px solid #e2e8f0;
       }
 
       .progress-bar {
         width: 100%;
         height: 8px;
-        background-color: #4a5568; /* Fondo de barra de progreso */
+        background-color: #e2e8f0;
         border-radius: 4px;
         overflow: hidden;
         margin-bottom: 0.5rem;
@@ -210,14 +209,14 @@ interface SurveyQuestion {
 
       .progress-fill {
         height: 100%;
-        background-color: #3b82f6; /* Color de relleno mantenido */
+        background-color: #2563eb;
         border-radius: 4px;
         transition: width 0.3s ease;
       }
 
       .progress-text {
         font-size: 0.875rem;
-        color: #a0aec0; /* Texto de progreso claro */
+        color: #6b7280;
         font-weight: 500;
       }
 
@@ -235,34 +234,33 @@ interface SurveyQuestion {
 
       .intro-icon {
         margin-bottom: 1.5rem;
-        color: #3b82f6; /* Color de icono mantenido */
+        color: #2563eb;
       }
 
       .survey-intro h3 {
         margin: 0 0 1rem 0;
         font-size: 1.5rem;
         font-weight: 700;
-        color: #e2e8f0; /* Texto de título de introducción claro */
+        color: #0f172a;
       }
 
       .survey-intro p {
         margin: 0 0 1rem 0;
-        color: #cbd5e1; /* Texto de introducción claro */
+        color: #6b7280;
         line-height: 1.6;
       }
 
       .rating-explanation {
-        background-color: #1a202c; /* Fondo de explicación oscuro */
+        background-color: #f0f9ff;
         padding: 1rem;
         border-radius: 0.5rem;
-        border-left: 4px solid #3b82f6; /* Borde mantenido */
+        border-left: 4px solid #2563eb;
         text-align: left !important;
         font-size: 0.875rem;
-        color: #cbd5e1; /* Texto de explicación claro */
       }
 
       .start-survey-btn {
-        background-color: #3b82f6; /* Color de botón mantenido */
+        background-color: #2563eb;
         color: white;
         border: none;
         border-radius: 0.5rem;
@@ -275,7 +273,7 @@ interface SurveyQuestion {
       }
 
       .start-survey-btn:hover {
-        background-color: #2563eb; /* Color de hover mantenido */
+        background-color: #1d4ed8;
       }
 
       .questions-container {
@@ -285,10 +283,10 @@ interface SurveyQuestion {
       }
 
       .question-item {
-        border: 1px solid #4a5568; /* Borde de pregunta más claro */
+        border: 1px solid #e2e8f0;
         border-radius: 0.75rem;
         padding: 1.5rem;
-        background-color: #1a202c; /* Fondo de pregunta oscuro */
+        background-color: #fafbfc;
       }
 
       .question-header {
@@ -304,7 +302,7 @@ interface SurveyQuestion {
         justify-content: center;
         width: 32px;
         height: 32px;
-        background-color: #3b82f6; /* Color de número mantenido */
+        background-color: #2563eb;
         color: white;
         border-radius: 50%;
         font-weight: 600;
@@ -316,7 +314,7 @@ interface SurveyQuestion {
         margin: 0;
         font-size: 1rem;
         font-weight: 600;
-        color: #e2e8f0; /* Texto de pregunta claro */
+        color: #0f172a;
         line-height: 1.5;
       }
 
@@ -337,9 +335,9 @@ interface SurveyQuestion {
         justify-content: center;
         width: 40px;
         height: 40px;
-        border: 2px solid #4a5568; /* Borde de botón de calificación más claro */
-        background-color: #2d3748; /* Fondo de botón de calificación oscuro */
-        color: #a0aec0; /* Texto de botón de calificación claro */
+        border: 2px solid #e2e8f0;
+        background-color: white;
+        color: #6b7280;
         border-radius: 0.5rem;
         font-weight: 600;
         cursor: pointer;
@@ -347,31 +345,31 @@ interface SurveyQuestion {
       }
 
       .rating-btn:hover {
-        border-color: #3b82f6; /* Color de borde de hover mantenido */
-        color: #3b82f6; /* Color de texto de hover mantenido */
+        border-color: #2563eb;
+        color: #2563eb;
         transform: translateY(-1px);
       }
 
       .rating-btn.selected {
-        background-color: #3b82f6; /* Color de selección mantenido */
-        border-color: #3b82f6; /* Color de borde de selección mantenido */
+        background-color: #2563eb;
+        border-color: #2563eb;
         color: white;
         transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3); /* Sombra mantenida */
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
       }
 
       .rating-labels {
         display: flex;
         justify-content: space-between;
         font-size: 0.75rem;
-        color: #a0aec0; /* Texto de etiquetas claro */
+        color: #6b7280;
         font-style: italic;
       }
 
       .survey-footer {
         padding: 1.5rem 2rem;
-        border-top: 1px solid #4a5568; /* Borde de pie de página más claro */
-        background-color: #1a202c; /* Fondo de pie de página oscuro */
+        border-top: 1px solid #e2e8f0;
+        background-color: #f8fafc;
         display: flex;
         align-items: center;
         justify-content: space-between;
@@ -384,7 +382,7 @@ interface SurveyQuestion {
       .completion-status {
         margin: 0;
         font-size: 0.875rem;
-        color: #a0aec0; /* Texto de estado claro */
+        color: #6b7280;
       }
 
       .footer-actions {
@@ -394,8 +392,8 @@ interface SurveyQuestion {
 
       .cancel-btn {
         background-color: transparent;
-        color: #a0aec0; /* Texto de botón de cancelar claro */
-        border: 1px solid #4a5568; /* Borde de botón de cancelar más claro */
+        color: #6b7280;
+        border: 1px solid #d1d5db;
         border-radius: 0.5rem;
         padding: 0.75rem 1.5rem;
         font-weight: 500;
@@ -404,12 +402,12 @@ interface SurveyQuestion {
       }
 
       .cancel-btn:hover {
-        background-color: #4a5568; /* Fondo de hover de cancelar más claro */
-        border-color: #718096; /* Borde de hover de cancelar más claro */
+        background-color: #f9fafb;
+        border-color: #9ca3af;
       }
 
       .submit-btn {
-        background-color: #3b82f6; /* Color de botón de enviar mantenido */
+        background-color: #2563eb;
         color: white;
         border: none;
         border-radius: 0.5rem;
@@ -420,11 +418,11 @@ interface SurveyQuestion {
       }
 
       .submit-btn:hover:not(.disabled) {
-        background-color: #2563eb; /* Color de hover de enviar mantenido */
+        background-color: #1d4ed8;
       }
 
       .submit-btn.disabled {
-        background-color: #718096; /* Color de deshabilitado más claro */
+        background-color: #9ca3af;
         cursor: not-allowed;
       }
 
@@ -435,24 +433,24 @@ interface SurveyQuestion {
 
       .thank-you-icon {
         margin-bottom: 1.5rem;
-        color: #10b981; /* Color de icono de agradecimiento mantenido */
+        color: #10b981;
       }
 
       .thank-you-content h2 {
         margin: 0 0 1rem 0;
         font-size: 1.75rem;
         font-weight: 700;
-        color: #e2e8f0; /* Texto de título de agradecimiento claro */
+        color: #0f172a;
       }
 
       .thank-you-content p {
         margin: 0 0 2rem 0;
-        color: #cbd5e1; /* Texto de agradecimiento claro */
+        color: #6b7280;
         font-size: 1.125rem;
       }
 
       .survey-summary {
-        background-color: #1a202c; /* Fondo de resumen oscuro */
+        background-color: #f0f9ff;
         border-radius: 0.75rem;
         padding: 1.5rem;
         margin-bottom: 2rem;
@@ -470,17 +468,17 @@ interface SurveyQuestion {
 
       .summary-label {
         font-size: 0.875rem;
-        color: #a0aec0; /* Texto de etiqueta de resumen claro */
+        color: #6b7280;
       }
 
       .summary-value {
         font-size: 1.5rem;
         font-weight: 600;
-        color: #e2e8f0; /* Texto de valor de resumen claro */
+        color: #0f172a;
       }
 
       .close-thank-you-btn {
-        background-color: #3b82f6; /* Color de botón de cerrar mantenido */
+        background-color: #2563eb;
         color: white;
         border: none;
         border-radius: 0.5rem;
@@ -492,7 +490,7 @@ interface SurveyQuestion {
       }
 
       .close-thank-you-btn:hover {
-        background-color: #2563eb; /* Color de hover de cerrar mantenido */
+        background-color: #1d4ed8;
       }
 
       @keyframes fadeIn {

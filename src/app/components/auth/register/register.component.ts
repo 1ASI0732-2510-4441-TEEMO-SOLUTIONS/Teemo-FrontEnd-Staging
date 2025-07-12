@@ -128,6 +128,65 @@ import { environment } from "../../../../environments/environment"
             </div>
           </div>
 
+          <!-- Shipping Company Field -->
+          <div class="form-group">
+            <label for="shippingCompany">Empresa Naviera (Opcional)</label>
+            <div class="input-container">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="input-icon">
+                <path d="M2 12a5 5 0 0 0 5 5 8 8 0 0 1 5 2 8 8 0 0 1 5-2 5 5 0 0 0 5-5V7H2v5z"></path>
+                <path d="M6 7V5c0-1.1.9-2 2-2h8a2 2 0 0 1 2 2v2"></path>
+              </svg>
+              <select
+                id="shippingCompany"
+                formControlName="shippingCompany"
+                (change)="onShippingCompanyChange($event)"
+              >
+                <option value="">Seleccione una empresa naviera</option>
+                <option value="APM-Maersk">APM-Maersk</option>
+                <option value="Mediterranean Shipping">Mediterranean Shipping</option>
+                <option value="Cosco Shipping">Cosco Shipping</option>
+                <option value="CMA CGM">CMA CGM</option>
+                <option value="Hapag-Lloyd">Hapag-Lloyd</option>
+                <option value="ONE">ONE</option>
+                <option value="Evergreen Line">Evergreen Line</option>
+                <option value="Yang Ming Marine">Yang Ming Marine</option>
+                <option value="Hyundai M. M.">Hyundai M. M.</option>
+                <option value="PIL (Pacific Int. Line)">PIL (Pacific Int. Line)</option>
+                <option value="Zim">Zim</option>
+                <option value="Wan Hai Line">Wan Hai Line</option>
+                <option value="Zhonggu Logistics">Zhonggu Logistics</option>
+                <option value="IRISL Group">IRISL Group</option>
+                <option value="KMTC">KMTC</option>
+                <option value="Antong Holdings">Antong Holdings</option>
+                <option value="SITC">SITC</option>
+                <option value="X-Press Feeders Group">X-Press Feeders Group</option>
+                <option value="TS Line">TS Line</option>
+                <option value="SM Corp.">SM Corp.</option>
+                <option value="other">Otra</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Custom Shipping Company Input (shown when "other" is selected) -->
+          <div class="form-group" *ngIf="showCustomShippingInput">
+            <label for="customShippingCompany">Especifique la Empresa Naviera</label>
+            <div class="input-container">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="input-icon">
+                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path>
+              </svg>
+              <input
+                type="text"
+                id="customShippingCompany"
+                formControlName="customShippingCompany"
+                placeholder="Ingrese el nombre de la empresa naviera"
+                [ngClass]="{'is-invalid': submitted && f['customShippingCompany'].errors}"
+              >
+            </div>
+            <div *ngIf="submitted && f['customShippingCompany'].errors" class="error-message">
+              <span *ngIf="f['customShippingCompany'].errors['required']">Debe especificar el nombre de la empresa naviera</span>
+            </div>
+          </div>
+
           <div class="form-group">
             <div class="terms-checkbox">
               <input type="checkbox" id="terms" formControlName="terms">
@@ -388,6 +447,7 @@ export class RegisterComponent implements OnInit {
   error = ""
   success = ""
   showPassword = false
+  showCustomShippingInput = false
 
   constructor(
     private formBuilder: FormBuilder,
@@ -402,6 +462,8 @@ export class RegisterComponent implements OnInit {
         password: ["", [Validators.required, Validators.minLength(6)]],
         confirmPassword: ["", Validators.required],
         role: ["", Validators.required],
+        shippingCompany: [""],
+        customShippingCompany: [""],
         terms: [false, Validators.requiredTrue],
       },
       {
@@ -413,6 +475,21 @@ export class RegisterComponent implements OnInit {
   // Getter para acceder fácilmente a los campos del formulario
   get f() {
     return this.registerForm.controls
+  }
+
+  onShippingCompanyChange(event: any): void {
+    const selectedValue = event.target.value
+    this.showCustomShippingInput = selectedValue === "other"
+
+    if (this.showCustomShippingInput) {
+      // Agregar validación requerida para el campo personalizado
+      this.f["customShippingCompany"].setValidators([Validators.required])
+    } else {
+      // Remover validación y limpiar el campo personalizado
+      this.f["customShippingCompany"].clearValidators()
+      this.f["customShippingCompany"].setValue("")
+    }
+    this.f["customShippingCompany"].updateValueAndValidity()
   }
 
   // Modificar el método onSubmit para manejar el caso de servidor de prueba
@@ -428,12 +505,18 @@ export class RegisterComponent implements OnInit {
     this.error = ""
     this.success = ""
 
+    // Determinar la empresa naviera final
+    let finalShippingCompany = this.f["shippingCompany"].value
+    if (finalShippingCompany === "other") {
+      finalShippingCompany = this.f["customShippingCompany"].value
+    }
+
     // Preparar los datos para el registro
-    // Use the exact role value from the form - it now matches the backend enum
     const registerData = {
       username: this.f["username"].value,
       password: this.f["password"].value,
-      roles: [this.f["role"].value], // Use the exact enum value
+      roles: [this.f["role"].value],
+      shippingCompany: finalShippingCompany || null, // Opcional
     }
 
     console.log("Sending registration data:", registerData)
