@@ -13,6 +13,7 @@ export interface Port {
     longitude: number
   }
   continent: string
+  country: string
 }
 
 @Injectable({
@@ -31,6 +32,7 @@ export class PortService {
         longitude: 103.851959,
       },
       continent: "Asia",
+      country: "Singapur",
     },
     {
       id: "2",
@@ -40,6 +42,7 @@ export class PortService {
         longitude: 4.466637,
       },
       continent: "Europe",
+      country: "Países Bajos",
     },
     {
       id: "3",
@@ -49,6 +52,7 @@ export class PortService {
         longitude: 121.46917,
       },
       continent: "Asia",
+      country: "China",
     },
     {
       id: "4",
@@ -58,6 +62,7 @@ export class PortService {
         longitude: -118.193741,
       },
       continent: "North America",
+      country: "Estados Unidos",
     },
     {
       id: "5",
@@ -67,6 +72,7 @@ export class PortService {
         longitude: -73.935242,
       },
       continent: "North America",
+      country: "Estados Unidos",
     },
     {
       id: "6",
@@ -76,6 +82,7 @@ export class PortService {
         longitude: -1.404351,
       },
       continent: "Europe",
+      country: "Reino Unido",
     },
     {
       id: "7",
@@ -85,6 +92,7 @@ export class PortService {
         longitude: 55.296249,
       },
       continent: "Asia",
+      country: "Emiratos Árabes Unidos",
     },
     {
       id: "8",
@@ -94,6 +102,7 @@ export class PortService {
         longitude: 72.877426,
       },
       continent: "Asia",
+      country: "India",
     },
     {
       id: "9",
@@ -103,6 +112,7 @@ export class PortService {
         longitude: 151.2099,
       },
       continent: "Oceania",
+      country: "Australia",
     },
     {
       id: "10",
@@ -112,6 +122,7 @@ export class PortService {
         longitude: 18.4233,
       },
       continent: "Africa",
+      country: "Sudáfrica",
     },
   ]
   constructor(

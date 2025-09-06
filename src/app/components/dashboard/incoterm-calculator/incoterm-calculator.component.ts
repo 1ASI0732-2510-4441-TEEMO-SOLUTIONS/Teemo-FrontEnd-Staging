@@ -42,6 +42,12 @@ import { IncotermService, IncotermFormData, IncotermCalculationResult } from "..
             <strong>Puerto de Destino:</strong> {{ destinationPort }}
           </div>
           <div class="info-item">
+            <strong>País del Vendedor:</strong> {{ originCountry }}
+          </div>
+          <div class="info-item">
+            <strong>País del Comprador:</strong> {{ destinationCountry }}
+          </div>
+          <div class="info-item">
             <strong>Distancia:</strong> {{ distance | number:'1.0-0' }} millas náuticas
           </div>
         </div>
@@ -123,30 +129,6 @@ import { IncotermService, IncotermFormData, IncotermCalculationResult } from "..
                 class="form-control"
                 placeholder="Nombre del comprador"
               />
-            </div>
-            <div class="form-group">
-              <label for="sellerCountry">País del Vendedor *</label>
-              <select id="sellerCountry" [(ngModel)]="formData.sellerCountry" class="form-control">
-                <option value="">Seleccione un país</option>
-                <option value="Estados Unidos">Estados Unidos</option>
-                <option value="China">China</option>
-                <option value="Alemania">Alemania</option>
-                <option value="Japón">Japón</option>
-                <option value="Brasil">Brasil</option>
-              </select>
-              <small class="form-hint">Afecta costos de exportación y documentación</small>
-            </div>
-            <div class="form-group">
-              <label for="buyerCountry">País del Comprador *</label>
-              <select id="buyerCountry" [(ngModel)]="formData.buyerCountry" class="form-control">
-                <option value="">Seleccione un país</option>
-                <option value="Estados Unidos">Estados Unidos</option>
-                <option value="China">China</option>
-                <option value="Alemania">Alemania</option>
-                <option value="Japón">Japón</option>
-                <option value="Brasil">Brasil</option>
-              </select>
-              <small class="form-hint">Determina derechos de importación y complejidad aduanera</small>
             </div>
           </div>
 
@@ -1338,6 +1320,8 @@ import { IncotermService, IncotermFormData, IncotermCalculationResult } from "..
 export class IncotermCalculatorComponent implements OnInit {
   @Input() originPort = ""
   @Input() destinationPort = ""
+  @Input() originCountry = ""
+  @Input() destinationCountry = ""
   @Input() distance = 0
   @Output() cancel = new EventEmitter<void>()
   @Output() calculationComplete = new EventEmitter<IncotermCalculationResult>()
@@ -1365,7 +1349,8 @@ export class IncotermCalculatorComponent implements OnInit {
   constructor(private incotermService: IncotermService) {}
 
   ngOnInit(): void {
-    // Initialize with default values if needed
+    this.formData.sellerCountry = this.originCountry
+    this.formData.buyerCountry = this.destinationCountry
   }
 
   isFormValid(): boolean {

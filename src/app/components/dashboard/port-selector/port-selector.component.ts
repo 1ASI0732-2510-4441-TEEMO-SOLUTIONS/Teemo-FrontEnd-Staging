@@ -534,6 +534,8 @@ import { IncotermCalculatorComponent } from "../incoterm-calculator/incoterm-cal
         *ngIf="showIncotermForm"
         [originPort]="selectedOriginPort?.name ?? ''"
         [destinationPort]="selectedDestinationPort?.name ?? ''"
+        [originCountry]="selectedOriginPort?.country ?? ''"
+        [destinationCountry]="selectedDestinationPort?.country ?? ''"
         [distance]="routeData?.totalDistance ?? 0"
         (cancel)="showIncotermForm = false"
       ></app-incoterm-calculator>
