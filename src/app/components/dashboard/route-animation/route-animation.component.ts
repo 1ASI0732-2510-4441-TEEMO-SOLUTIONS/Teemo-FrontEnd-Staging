@@ -138,32 +138,7 @@ interface LineSegment {
         </div>
       </div>
 
-      <!-- Información de detección de tierra -->
-      <div class="detection-info" *ngIf="geoJsonLoaded && lastDetectionInfo">
-        <div class="info-card">
-          <h4>Detección de Tierra</h4>
-          <div class="detection-grid">
-            <div class="detection-item">
-              <span class="label">Línea directa cruza tierra:</span>
-              <span class="value" [class.crosses]="lastDetectionInfo.directLineCrossesLand">
-                {{ lastDetectionInfo.directLineCrossesLand ? "SÍ" : "NO" }}
-              </span>
-            </div>
-            <div class="detection-item">
-              <span class="label">Puntos de prueba:</span>
-              <span class="value">{{ lastDetectionInfo.testPoints }}</span>
-            </div>
-            <div class="detection-item">
-              <span class="label">Intersecciones detectadas:</span>
-              <span class="value">{{ lastDetectionInfo.intersections }}</span>
-            </div>
-            <div class="detection-item">
-              <span class="label">Dirección de curvatura:</span>
-              <span class="value">{{ lastDetectionInfo.curveDirection > 0 ? "ESTE" : lastDetectionInfo.curveDirection < 0 ? "OESTE" : "RECTA" }}</span>
-            </div>
-          </div>
-        </div>
-      </div>
+
 
       <!-- Información de la Ruta -->
       <div class="route-info" *ngIf="routeData">
@@ -1281,7 +1256,7 @@ export class RouteAnimationComponent implements OnInit, OnDestroy, OnChanges {
     const distance = Math.sqrt(deltaLat * deltaLat + deltaLng * deltaLng)
 
     // Calcular curvatura adaptativa basada en la distancia
-    const baseCurvature = Math.min(distance * 0.3, 30)
+    const baseCurvature = Math.min(distance * 0.6, 120)
     const curvature = baseCurvature * Math.abs(direction)
 
     // Punto medio en espacio desenrollado
